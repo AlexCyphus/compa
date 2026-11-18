@@ -1,0 +1,10 @@
+claude-agent-sdk==0.2.185
+espeakng-loader==0.2.4
+misaki[en]==0.9.4
+mlx-audio==0.6.6
+mlx-whisper==0.4.3
+numpy==2.4.6
+onnxruntime==1.32.0
+phonemizer-fork==3.3.2
+rich==15.0.0
+sounddevice==0.5.6

@@ -1,0 +1,37 @@
+{
+  "learner_name": "Alex",
+  "native_language": "English",
+  "sessions_folder": "~/Desktop/Compa",
+  "claude_config_dir": "~/.claude-personal",
+  "talker_model": "claude-haiku-5-5",
+  "corrector_model": "claude-sonnet-5-5",
+  "languages": {
+    "spanish": {
+      "language": "es",
+      "language_name": "Spanish",
+      "variety": "Colombian Spanish",
+      "level": "C1",
+      "voice": "kokoro:ef_dora",
+      "news_from": "Colombia and Latin America",
+      "whisper_prompt": "Eh, pues... o sea, este, bueno, es que, eh, no sé."
+    },
+    "german": {
+      "language": "de",
+      "language_name": "German",
+      "variety": "North German (Hochdeutsch)",
+      "level": "B2",
+      "voice": "Anna",
+      "news_from": "Germany, Austria and Switzerland",
+      "whisper_prompt": "Äh, also... naja, ich meine, hm, keine Ahnung."
+    },
+    "french": {
+      "language": "fr",
+      "language_name": "French",
+      "variety": "Metropolitan French",
+      "level": "A1",
+      "voice": "kokoro:ff_siwis",
+      "news_from": "France",
+      "whisper_prompt": "Euh... ben... alors, je sais pas, euh."
+    }
+  }
+}
