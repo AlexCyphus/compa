@@ -180,6 +180,8 @@ def _ends_with_abbreviation(text: str, match: re.Match) -> bool:
 
 # ---------------------------------------------------------------- talker
 
+SCOUT_TIMEOUT_SECONDS = 180
+
 # Topics to start from when there's no briefing yet, so calls don't all open the same way.
 SPARKS = [
     "AI and how it's changing everyday jobs", "a startup or app idea", "remote work and offices",
@@ -512,9 +514,13 @@ class Scout:
             permission_mode="bypassPermissions",
             include_partial_messages=False,
         )
-        async with ClaudeSDKClient(options) as client:
-            await client.query(_scout_task(self.profile))
-            result = await _result_text(client)
+        try:
+            async with asyncio.timeout(SCOUT_TIMEOUT_SECONDS):
+                async with ClaudeSDKClient(options) as client:
+                    await client.query(_scout_task(self.profile))
+                    result = await _result_text(client)
+        except TimeoutError:
+            return []  # no briefing this call; the next call tries again
         return _build_all(Story, _parse_json(result, "["))
 
 
