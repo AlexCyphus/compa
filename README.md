@@ -43,7 +43,7 @@ compa --mic "MacBook Pro Microphone"
 - **Talk:** just talk. Compa listens on the MacBook mic by default, so AirPods stay in high-quality playback mode (their own mic switches them to muffled headset mode). Compa replies when you stop. If you trail off mid-thought ("compré una…", "pero eh"), it waits longer so you can find the word.
 - **Cut it off:** start talking over it and it stops mid-sentence. It remembers only what you actually heard.
 - **Don't know a word?** Say it in English. It shows up as `🔤 lawnmower → podadora`, and Compa uses the right word in its reply.
-- **Go quiet** and Compa brings up something new after about 12 seconds.
+- **Go quiet** and Compa brings up something new after about 30 seconds, plus 10 seconds for each correction or English word it just showed you, so you have time to read them.
 - **Hang up** with Ctrl-C. You get a report card in the terminal, and the whole call is saved to `sessions_folder` as Markdown, with the conversation, corrections, English words and report card.
 
 ## How it stays snappy

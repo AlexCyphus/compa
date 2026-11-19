@@ -35,9 +35,12 @@ def main() -> None:
             pass
     if not conversation.log.turns:
         return
-    screen.console.print("\n👋 Writing your report card…", style="dim")
-    card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
-    screen.report_card(card)
+    screen.console.print("\n👋 Writing your report card (about 20s, Ctrl-C again to skip it)…", style="dim")
+    try:
+        card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
+        screen.report_card(card)
+    except KeyboardInterrupt:
+        card = None
     path = save_call(profile.sessions_folder, profile.language_name, conversation.talker.history, conversation.log, card)
     screen.console.print(f"Saved to {path}", style="dim")
 

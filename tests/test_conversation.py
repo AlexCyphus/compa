@@ -282,3 +282,15 @@ async def test_compa_stops_after_its_first_question(call):
 
     assert talker.history[-1] == ("assistant", "Qué bacano. ¿Y fue chistosa?")
     assert "¿O de acción?" not in output.getvalue()
+
+
+async def test_new_topic_waits_longer_while_there_are_corrections_to_read(call, monkeypatch):
+    conversation, listener, talker, output = call
+    monkeypatch.setattr(conversation_module, "NUDGE_AFTER_SILENCE_SECONDS", 0.5)
+    monkeypatch.setattr(conversation_module, "READING_SECONDS_PER_CORRECTION", 5.0)
+
+    await say(listener, SpeechStarted(), TurnEnded("Compré un lawnmower y es importante que lo corto.", 3.0))
+    await until(lambda: "que lo corte" in output.getvalue())
+    await asyncio.sleep(3)
+
+    assert conversation.log.nudges == 0

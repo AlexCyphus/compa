@@ -12,7 +12,8 @@ from compa.screen import Screen
 from compa.settings import Profile
 from compa.speak import Speaker
 
-NUDGE_AFTER_SILENCE_SECONDS = 12.0
+NUDGE_AFTER_SILENCE_SECONDS = 30.0
+READING_SECONDS_PER_CORRECTION = 10.0
 BRIEFING_WAIT_SECONDS = 1.0
 MAX_SENTENCES = 4
 PRERENDER_SENTENCES = 2
@@ -209,10 +210,16 @@ class Conversation:
         while True:
             await asyncio.sleep(1)
             quiet_for = time.monotonic() - self._last_activity
-            if quiet_for > NUDGE_AFTER_SILENCE_SECONDS and self._everyone_quiet():
+            if quiet_for > self._patience() and self._everyone_quiet():
                 self.log.nudges += 1
                 self._last_activity = time.monotonic()
                 self._speak(self.talker.nudge())
+
+    def _patience(self) -> float:
+        """Silence allowed before a new topic, with extra time to read the corrections of the last turn."""
+        feedback = self.log.turns[-1].feedback if self.log.turns else None
+        shown = len(feedback.corrections) + len(feedback.english_words) if feedback else 0
+        return NUDGE_AFTER_SILENCE_SECONDS + READING_SECONDS_PER_CORRECTION * shown
 
     def _everyone_quiet(self) -> bool:
         return self._speaking_reply is None and not self._learner_talking and not self.speaker.is_speaking
