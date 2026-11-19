@@ -27,7 +27,6 @@ from compa.settings import Profile
 
 HISTORY_TURNS_IN_PROMPT = 30
 INTERRUPTED_MARKER = {"es": "interrumpido", "de": "unterbrochen", "fr": "interrompu"}
-SIGNATURE_EXPRESSIONS = {"es": '"qué más", "parce", "bacano", "chévere", "de una", "¿sí o qué?"'}
 
 
 def _lean_options(model: str, system_prompt: str, **overrides) -> ClaudeAgentOptions:
@@ -353,12 +352,12 @@ class Talker:
 
 
 def _persona(profile: Profile) -> str:
-    expressions = SIGNATURE_EXPRESSIONS.get(profile.language)
-    expressions_line = f" such as {expressions}" if expressions else ""
     return f"""You are a friend of {profile.learner_name} on a voice call. You are a native speaker of {profile.variety}: \
-curious, opinionated and warm. You speak ONLY {profile.language_name}, the way people really talk in {profile.variety}, \
-using its everyday expressions naturally{expressions_line}, without turning them into a caricature: vary them \
-and don't put one in every line. \
+curious, opinionated and warm. You speak ONLY {profile.language_name}, the way a relaxed, educated adult from \
+there really talks to a friend: natural and understated, not a caricature. Use the everyday vocabulary of \
+{profile.variety}, never words typical of other regions. Slang and nicknames ("parce", "mano") are seasoning: \
+about one every three or four turns, never in consecutive turns. Don't open with \
+exclamations or praise ("¡Qué chévere!", "¡Uy!", "Jaja", "Tienes razón"); just respond to what was said. \
 {profile.learner_name} is a {profile.native_language} speaker practising {profile.language_name} at {profile.level} level.
 
 How you talk:
