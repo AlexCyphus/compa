@@ -6,7 +6,7 @@ Default: learner audio is injected straight into the listener, Compa's speech is
 --acoustic: learner audio plays out of the MacBook speakers and Compa listens on the MacBook microphone
 (the real mic path); Compa talks on the default output device (use headphones so it doesn't hear itself).
 
-Scripted moments: a mid-thought pause, the learner cutting Compa off, and a long silence (Compa should nudge).
+Scripted moments: a mid-thought pause and the learner cutting Compa off.
 """
 import argparse
 import asyncio
@@ -36,7 +36,7 @@ from compa.speak import Speaker  # noqa: E402
 
 LEARNER_VOICES = {"es": "Eddy (Spanish (Mexico))", "de": "Eddy (German (Germany))", "fr": "Eddy (French (France))"}
 ENGLISH_VOICE = "Samantha"
-PAUSE_TURN, BARGE_IN_TURN, SILENT_TURN = 2, 4, 6
+PAUSE_TURN, BARGE_IN_TURN = 2, 4
 MID_THOUGHT_PAUSE_SECONDS = 0.7
 HESITATION_SECONDS = 0.5
 WORD_GAP_SECONDS = 0.15
@@ -142,10 +142,6 @@ async def drive(conversation: Conversation, learner: SimulatedLearner, mouth: Mo
         else:
             await wait_for(compa_idle)
             await asyncio.sleep(0.4)
-        if turn == SILENT_TURN:
-            nudges = conversation.log.nudges
-            await wait_for(lambda: conversation.log.nudges > nudges, timeout=40)
-            await wait_for(compa_idle)
         line = await learner.answer(conversation._last_assistant_line())
         audio = learner.render(line)
         if turn == PAUSE_TURN:
@@ -172,7 +168,7 @@ def report(conversation: Conversation) -> None:
         print(f"{number}. {timing} reply after {latency} speculation={'hit' if turn.speculation_used else 'miss'} "
               f"corrections={len(found.corrections) if found else '?'} "
               f"english={[w.said + '→' + w.target for w in found.english_words] if found else '?'}")
-    print(f"interruptions={log.interruptions} nudges={log.nudges}")
+    print(f"interruptions={log.interruptions}")
 
 
 async def main() -> None:

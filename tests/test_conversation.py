@@ -1,4 +1,4 @@
-"""The call loop with fake ears, mouth and brain: speculation, barge-in, carried-over turns, nudges, feedback."""
+"""The call loop with fake ears, mouth and brain: speculation, barge-in, carried-over turns, feedback, saving words."""
 import asyncio
 import io
 
@@ -7,6 +7,7 @@ from rich.console import Console
 
 from compa import conversation as conversation_module
 from compa.brain import Correction, EnglishWord, Feedback
+from compa.clozemaster import SaveResult
 from compa.conversation import Brain, Conversation
 from compa.listen import Paused, SpeechStarted, TurnEnded
 from compa.screen import Screen
@@ -130,9 +131,6 @@ class FakeTalker:
     def opener(self):
         return self._make(None, ["¡Hola!", "¿Qué más?"])
 
-    def nudge(self):
-        return self._make(None, ["¿Y qué opinas del fútbol?"])
-
     def reply(self, text):
         return self._make(text, [f"Respuesta a {text}", "¿Y tú?"])
 
@@ -149,12 +147,23 @@ class FakeCorrector:
     async def close(self):
         pass
 
-    async def check(self, user_text, context):
+    async def check(self, user_text, context, recent_english_words=()):
         await asyncio.sleep(0.1)
+        if "guarda" in user_text:
+            return Feedback([], [], ["podadora"])
         if "lawnmower" in user_text:
             return Feedback([Correction("que lo corto", "que lo corte", "Subjuntivo", False)],
                             [EnglishWord("lawnmower", "podadora", "")])
         return Feedback([], [])
+
+
+class FakeClozemaster:
+    def __init__(self):
+        self.saved: list[str] = []
+
+    async def save(self, words, partner_line, learner_line):
+        self.saved += words
+        return SaveResult("Books!", [f"Compré una {{{{{word}}}}}." for word in words], [])
 
 
 class FakeScout:
@@ -167,7 +176,7 @@ async def call():
     listener, speaker, talker = FakeListener(), FakeSpeaker(), FakeTalker()
     output = io.StringIO()
     screen = Screen(Console(file=output, width=200, color_system=None))
-    conversation = Conversation(listener, speaker, screen, Brain(talker, FakeCorrector(), FakeScout()))
+    conversation = Conversation(listener, speaker, screen, Brain(talker, FakeCorrector(), FakeScout(), FakeClozemaster()))
     task = asyncio.create_task(conversation.run())
     await until(lambda: talker.history)
     yield conversation, listener, talker, output
@@ -263,16 +272,6 @@ async def test_english_word_and_correction_are_shown(call):
     assert shown.index("¿Y tú?") < shown.index("que lo corte"), "corrections wait for the reply to finish"
 
 
-async def test_long_silence_brings_a_new_topic(call, monkeypatch):
-    conversation, listener, talker, output = call
-    monkeypatch.setattr(conversation_module, "NUDGE_AFTER_SILENCE_SECONDS", 0.5)
-
-    await until(lambda: conversation.log.nudges == 1, timeout=4)
-    await until(lambda: len(talker.history) == 2)
-
-    assert talker.history[-1] == ("assistant", "¿Y qué opinas del fútbol?")
-
-
 async def test_compa_stops_after_its_first_question(call):
     conversation, listener, talker, output = call
     talker.reply = lambda text: talker._make(text, ["Qué bacano.", "¿Y fue chistosa?", "¿O de acción?", "Yo voy poco."])
@@ -284,13 +283,19 @@ async def test_compa_stops_after_its_first_question(call):
     assert "¿O de acción?" not in output.getvalue()
 
 
-async def test_new_topic_waits_longer_while_there_are_corrections_to_read(call, monkeypatch):
+async def test_long_silence_does_not_make_compa_talk(call):
     conversation, listener, talker, output = call
-    monkeypatch.setattr(conversation_module, "NUDGE_AFTER_SILENCE_SECONDS", 0.5)
-    monkeypatch.setattr(conversation_module, "READING_SECONDS_PER_CORRECTION", 5.0)
 
-    await say(listener, SpeechStarted(), TurnEnded("Compré un lawnmower y es importante que lo corto.", 3.0))
-    await until(lambda: "que lo corte" in output.getvalue())
     await asyncio.sleep(3)
 
-    assert conversation.log.nudges == 0
+    assert talker.history == [("assistant", "¡Hola! ¿Qué más?")]
+
+
+async def test_asking_to_save_a_word_adds_it_to_clozemaster(call):
+    conversation, listener, talker, output = call
+
+    await say(listener, SpeechStarted(), TurnEnded("Oye, guarda esa palabra en Clozemaster.", 2.0))
+    await until(lambda: "💾" in output.getvalue())
+
+    assert conversation.clozemaster.saved == ["podadora"]
+    assert "💾 Saved to Books!: Compré una {{podadora}}." in output.getvalue()

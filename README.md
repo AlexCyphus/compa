@@ -43,7 +43,8 @@ compa --mic "MacBook Pro Microphone"
 - **Talk:** just talk. Compa listens on the MacBook mic by default, so AirPods stay in high-quality playback mode (their own mic switches them to muffled headset mode). Compa replies when you stop. If you trail off mid-thought ("compré una…", "pero eh"), it waits longer so you can find the word.
 - **Cut it off:** start talking over it and it stops mid-sentence. It remembers only what you actually heard.
 - **Don't know a word?** Say it in English. It shows up as `🔤 lawnmower → podadora`, and Compa uses the right word in its reply.
-- **Go quiet** and Compa brings up something new after about 30 seconds, plus 10 seconds for each correction or English word it just showed you, so you have time to read them.
+- **Take your time:** after its hello, Compa only talks when you do. If you go quiet it just waits; say "pregúntame otra cosa" when you want a new question.
+- **Save a word:** say "guarda esa palabra en Clozemaster" (or name the word) and it's added as a cloze sentence to `clozemaster_collection` (`💾 Saved to Books!: …`). This uses the Clozemaster connector on your claude.ai account.
 - **Hang up** with Ctrl-C. You get a report card in the terminal, and the whole call is saved to `sessions_folder` as Markdown, with the conversation, corrections, English words and report card.
 
 ## How it stays snappy
@@ -79,6 +80,7 @@ History is kept in `sessions_folder` as `grades-<lang>.json` and `common-errors-
 | `voice` | `kokoro:<voice>` (e.g. `kokoro:ef_dora`), or any macOS voice name (`say -v '?'`) |
 | `news_from` | where the local slice of the news comes from |
 | `whisper_prompt` | filler words in the language, so Whisper keeps disfluencies instead of tidying them |
+| `clozemaster_collection` | optional: the Clozemaster collection (in this language) that "save that word" adds to |
 | `talker_model` / `corrector_model` | Claude models for the conversation (fast) and the corrections and report (careful) |
 
 To add a language, copy a profile and change these values. Kokoro has voices for Spanish, French, Italian, Portuguese, English, Japanese, Chinese and Hindi. For other languages, use a macOS voice. Premium macOS voices sound much better: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices.
@@ -91,4 +93,4 @@ To add a language, copy a profile and change these values. Kokoro has voices for
 .venv/bin/python scripts/simulate.py spanish --acoustic   # same, out of the speakers into the real mic
 ```
 
-The simulated learner makes typical mistakes, slips in English words, pauses mid-thought, talks over Compa once and goes quiet once. At the end it prints reply latency, speculation hits, corrections and English words for every turn.
+The simulated learner makes typical mistakes, slips in English words, pauses mid-thought and talks over Compa once. At the end it prints reply latency, speculation hits, corrections and English words for every turn.

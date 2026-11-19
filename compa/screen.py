@@ -7,6 +7,7 @@ from rich.live import Live
 from rich.text import Text
 
 from compa.brain import Correction, Feedback, Story
+from compa.clozemaster import SaveResult
 from compa.report import ReportCard
 
 
@@ -69,6 +70,12 @@ class Screen:
             self.console.print(Text.assemble(
                 (f"   {icon} ", ""), (correction.said, f"strike {style}"), (" → ", style),
                 (correction.correct, f"bold {style}"), (f"  {correction.why}", f"dim {style}")))
+
+    def saved(self, result: SaveResult) -> None:
+        for sentence in result.saved:
+            self.console.print(Text(f"   💾 Saved to {result.collection}: {sentence}", style="green"))
+        for failure in result.failed:
+            self.console.print(Text(f"   💾 Couldn't save to {result.collection}: {failure}", style="red"))
 
     def briefing_ready(self, stories: list[Story]) -> None:
         self.console.print(Text(f"   📰 {len(stories)} fresh topics ready", style="dim"))

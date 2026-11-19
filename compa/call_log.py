@@ -20,4 +20,3 @@ class TurnRecord:
 class CallLog:
     turns: list[TurnRecord] = field(default_factory=list)
     interruptions: int = 0
-    nudges: int = 0

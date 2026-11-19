@@ -13,7 +13,8 @@
       "level": "C1",
       "voice": "kokoro:ef_dora",
       "news_from": "Colombia and Latin America",
-      "whisper_prompt": "Eh, pues... o sea, este, bueno, es que, eh, no sé."
+      "whisper_prompt": "Eh, pues... o sea, este, bueno, es que, eh, no sé.",
+      "clozemaster_collection": "Books!"
     },
     "german": {
       "language": "de",

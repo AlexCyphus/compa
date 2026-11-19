@@ -21,6 +21,7 @@ class Profile:
     voice: str
     news_from: str
     whisper_prompt: str
+    clozemaster_collection: str | None = None
 
 
 def profile_names() -> list[str]:

@@ -135,6 +135,30 @@ async def test_corrector_leaves_a_clean_sentence_alone(corrector):
     assert feedback.english_words == []
 
 
+@pytest.mark.asyncio
+async def test_corrector_spots_a_request_to_save_the_word_just_taught(corrector):
+    feedback = await corrector.check(
+        "Ah, no conocía esa palabra, guárdala en mi Clozemaster porfa",
+        context="Se dice podadora, la máquina para cortar el pasto. ¿Tú tienes jardín?",
+    )
+    print(f"\n{feedback}")
+    assert feedback.words_to_save == ["podadora"]
+
+
+@pytest.mark.asyncio
+async def test_corrector_saves_the_word_for_an_english_word_used_a_turn_ago(corrector):
+    feedback = await corrector.check("Ah, no conocía esa palabra, guárdala en mi Clozemaster porfa",
+                                     context="¿Y te tocó cortar todo el pasto solo?",
+                                     recent_english_words=["lawnmower → podadora"])
+    assert feedback.words_to_save == ["podadora"]
+
+
+@pytest.mark.asyncio
+async def test_corrector_saves_nothing_when_not_asked(corrector):
+    feedback = await corrector.check("Sí, tengo un jardín pequeño atrás de la casa", context="¿Tú tienes jardín?")
+    assert feedback.words_to_save == []
+
+
 # ---------------------------------------------------------------- scout
 
 

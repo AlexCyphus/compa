@@ -6,16 +6,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from compa.brain import Corrector, Reply, Scout, Talker
+from compa.clozemaster import Clozemaster
 from compa.call_log import CallLog, TurnRecord
 from compa.listen import Listener, Partial, Paused, Resumed, SpeechStarted, TurnEnded
 from compa.screen import Screen
 from compa.settings import Profile
 from compa.speak import Speaker
 
-NUDGE_AFTER_SILENCE_SECONDS = 30.0
-READING_SECONDS_PER_CORRECTION = 10.0
 BRIEFING_WAIT_SECONDS = 1.0
 MAX_SENTENCES = 4
+RECENT_TURNS_FOR_SAVING = 3
 PRERENDER_SENTENCES = 2
 SPEECH_THRESHOLD_WHILE_TALKING = 0.7
 SPEECH_THRESHOLD = 0.5
@@ -26,10 +26,12 @@ class Brain:
     talker: Talker
     corrector: Corrector
     scout: Scout
+    clozemaster: Clozemaster | None = None
 
     @classmethod
     def for_profile(cls, profile: Profile, cache_dir: Path) -> "Brain":
-        return cls(Talker(profile), Corrector(profile), Scout(profile, cache_dir))
+        clozemaster = Clozemaster(profile) if profile.clozemaster_collection else None
+        return cls(Talker(profile), Corrector(profile), Scout(profile, cache_dir), clozemaster)
 
 
 def same_words(first: str, second: str) -> bool:
@@ -47,6 +49,7 @@ class Conversation:
         self.screen = screen
         self.talker = brain.talker
         self.corrector = brain.corrector
+        self.clozemaster = brain.clozemaster
         self.scout = brain.scout
         self.log = CallLog()
         self.started_at = time.monotonic()
@@ -56,7 +59,6 @@ class Conversation:
         self._speculative_text = ""
         self._turn_ended_at: float | None = None
         self._pending_turn: TurnRecord | None = None
-        self._last_activity = time.monotonic()
         self._learner_talking = False
         self._carried_over = ""
         self._reply_to_learner: Reply | None = None
@@ -71,10 +73,8 @@ class Conversation:
         await asyncio.wait([briefing], timeout=BRIEFING_WAIT_SECONDS)  # today's briefing is cached after the first call
         self.screen.status("")
         self._spawn(self.speaker.run())
-        self._spawn(self._nudge_when_quiet())
         self._speak(self.talker.opener())
         async for event in self.listener.events():
-            self._last_activity = time.monotonic()
             match event:
                 case SpeechStarted() | Resumed():
                     self._on_speech()
@@ -189,7 +189,6 @@ class Conversation:
                 self.screen.reply_finished()
         finally:
             self.listener.set_speech_threshold(SPEECH_THRESHOLD)
-            self._last_activity = time.monotonic()
 
     def _sentence_started(self, sentence: str) -> None:
         if self._turn_ended_at is not None and self._pending_turn is not None:
@@ -198,31 +197,20 @@ class Conversation:
         self.screen.compa(sentence)
 
     async def _show_feedback(self, turn: TurnRecord, previous_line: str) -> None:
-        turn.feedback = await self.corrector.check(turn.learner, previous_line)
+        turn.feedback = await self.corrector.check(turn.learner, previous_line, self._recent_english_words())
         self.screen.feedback(turn.feedback)
+        if turn.feedback.words_to_save and self.clozemaster is not None:
+            self.screen.saved(await self.clozemaster.save(turn.feedback.words_to_save, previous_line, turn.learner))
 
     async def _load_briefing(self) -> None:
         stories = await self.scout.briefing()
         self.talker.set_briefing(stories)
         self.screen.briefing_ready(stories)
 
-    async def _nudge_when_quiet(self) -> None:
-        while True:
-            await asyncio.sleep(1)
-            quiet_for = time.monotonic() - self._last_activity
-            if quiet_for > self._patience() and self._everyone_quiet():
-                self.log.nudges += 1
-                self._last_activity = time.monotonic()
-                self._speak(self.talker.nudge())
-
-    def _patience(self) -> float:
-        """Silence allowed before a new topic, with extra time to read the corrections of the last turn."""
-        feedback = self.log.turns[-1].feedback if self.log.turns else None
-        shown = len(feedback.corrections) + len(feedback.english_words) if feedback else 0
-        return NUDGE_AFTER_SILENCE_SECONDS + READING_SECONDS_PER_CORRECTION * shown
-
-    def _everyone_quiet(self) -> bool:
-        return self._speaking_reply is None and not self._learner_talking and not self.speaker.is_speaking
+    def _recent_english_words(self) -> list[str]:
+        """So "save that word" can mean a word the learner asked about a turn or two ago."""
+        recent = self.log.turns[-RECENT_TURNS_FOR_SAVING:]
+        return [f"{word.said} → {word.target}" for turn in recent if turn.feedback for word in turn.feedback.english_words]
 
     def _last_assistant_line(self) -> str:
         return next((text for role, text in reversed(self.talker.history) if role == "assistant"), "")

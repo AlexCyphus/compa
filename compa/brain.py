@@ -10,7 +10,7 @@ import re
 import time
 from collections import deque
 from collections.abc import AsyncIterator, Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
 
@@ -317,14 +317,6 @@ class Talker:
         )
         return self._start_reply(task, None)
 
-    def nudge(self) -> Reply:
-        task = (
-            f"{self.profile.learner_name} has been quiet for a while. Don't comment on the silence; "
-            f"casually bring up a new topic (from the briefing, or something about {random.choice(SPARKS)}) "
-            "and ask an easy-to-answer question."
-        )
-        return self._start_reply(task, None)
-
     def _start_reply(self, task: str, user_text: str | None) -> Reply:
         prompt = "\n\n".join(part for part in (self._briefing_block(), self._history_block(), task) if part)
 
@@ -373,6 +365,8 @@ opinions and arguing a side, concessions, wishes and doubts that need the subjun
 - Never correct {profile.learner_name}'s mistakes; corrections are shown separately on screen.
 - If {profile.learner_name} uses a {profile.native_language} word, just use the {profile.language_name} word \
 naturally in your reply without making a fuss.
+- If {profile.learner_name} asks you to save a word to Clozemaster, an app on the call does it: just say \
+briefly that it's saved, naming the word, then carry on.
 - If {profile.learner_name} speaks {profile.native_language} or asks what a word means, answer briefly in \
 {profile.language_name} and carry on the conversation.
 
@@ -401,6 +395,7 @@ class EnglishWord:
 class Feedback:
     corrections: list[Correction]
     english_words: list[EnglishWord]
+    words_to_save: list[str] = field(default_factory=list)
 
 
 class Corrector:
@@ -413,10 +408,11 @@ class Corrector:
     async def close(self) -> None:
         await self._pool.close()
 
-    async def check(self, user_text: str, context: str) -> Feedback:
+    async def check(self, user_text: str, context: str, recent_english_words: list[str] = ()) -> Feedback:
         client = await self._pool.take()
+        recent = f"\nEnglish words the learner used recently: {', '.join(recent_english_words)}" if recent_english_words else ""
         try:
-            await client.query(f'Partner\'s previous line: "{context}"\nLearner said: "{user_text}"')
+            await client.query(f'Partner\'s previous line: "{context}"{recent}\nLearner said: "{user_text}"')
             return _parse_feedback(await _final_text(client))
         finally:
             self._pool.discard(client)
@@ -447,9 +443,16 @@ never also in "corrections". The sentence around such a word (hesitations, resta
 "said" quotes the learner's exact words (just the wrong fragment); "correct" is the fixed fragment; "why" and \
 "note" are in {profile.language_name}, at most 8 words.
 
+If the learner asks to save, keep or add a word or phrase (to Clozemaster, their collection, their list…), put \
+that {profile.language_name} word or phrase in "words_to_save", in its dictionary form. When they say "that word" \
+or similar, work out which one from the partner's previous line or the English words they used recently (save the \
+{profile.language_name} word, not the English one). The request \
+itself is not an error.
+
 Only list a correction when "correct" differs from "said". Answer with JSON only, no prose, exactly this shape (empty lists when there is nothing):
 {{"corrections": [{{"said": "...", "correct": "...", "why": "...", "upgrade": false}}],
- "english_words": [{{"said": "...", "target": "...", "note": "..."}}]}}"""
+ "english_words": [{{"said": "...", "target": "...", "note": "..."}}],
+ "words_to_save": ["..."]}}"""
 
 
 def _parse_feedback(text: str) -> Feedback:
@@ -460,6 +463,7 @@ def _parse_feedback(text: str) -> Feedback:
     return Feedback(
         corrections=[correction for correction in corrections if correction.correct != correction.said],
         english_words=_build_all(EnglishWord, parsed.get("english_words")),
+        words_to_save=[word for word in parsed.get("words_to_save") or [] if isinstance(word, str) and word.strip()],
     )
 
 
