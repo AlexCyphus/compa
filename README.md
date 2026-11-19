@@ -40,7 +40,7 @@ compa --mic "MacBook Pro Microphone"
 
 **Wear headphones.** On speakers, Compa hears itself and cuts itself off.
 
-- **Talk:** just talk. Compa replies when you stop. If you trail off mid-thought ("compré una…", "pero eh"), it waits longer so you can find the word.
+- **Talk:** just talk. Compa listens on the MacBook mic by default, so AirPods stay in high-quality playback mode (their own mic switches them to muffled headset mode). Compa replies when you stop. If you trail off mid-thought ("compré una…", "pero eh"), it waits longer so you can find the word.
 - **Cut it off:** start talking over it and it stops mid-sentence. It remembers only what you actually heard.
 - **Don't know a word?** Say it in English. It shows up as `🔤 lawnmower → podadora`, and Compa uses the right word in its reply.
 - **Go quiet** and Compa brings up something new after about 12 seconds.
