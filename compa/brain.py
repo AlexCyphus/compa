@@ -110,7 +110,8 @@ class _ClientPool:
 
 # ---------------------------------------------------------------- sentence splitting
 
-_TERMINATOR_RUN = re.compile(r"[.!?…]+[\"'»”’)\]]*\s+")
+_FULL_WIDTH_TERMINATORS = "。！？"  # Japanese and Chinese: no space or capital letter after them
+_TERMINATOR_RUN = re.compile(r"[.!?…]+[\"'»”’)\]]*\s+|[。！？]+[」』）”’]*\s*")
 _SENTENCE_OPENERS = "¿¡«\"“'(—-"
 _ABBREVIATIONS = {
     "sr", "sra", "srta", "dr", "dra", "ud", "uds", "lic", "ing", "prof", "etc", "pág", "aprox",
@@ -163,6 +164,8 @@ def _split_off_complete(text: str) -> tuple[list[str], str]:
 
 
 def _is_sentence_boundary(text: str, match: re.Match) -> bool:
+    if match.group()[0] in _FULL_WIDTH_TERMINATORS:
+        return True
     next_char = text[match.end()]
     starts_new_sentence = next_char.isupper() or next_char.isdigit() or next_char in _SENTENCE_OPENERS
     return starts_new_sentence and not _ends_with_abbreviation(text, match)

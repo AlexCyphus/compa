@@ -57,6 +57,11 @@ def test_splits_on_newlines():
     assert split_sentences("Hola, parce\n¿Cómo vas?") == ["Hola, parce", "¿Cómo vas?"]
 
 
+def test_splits_japanese_and_chinese_sentences():
+    assert split_sentences("今日は暑いですね。映画を見に行きませんか？") == ["今日は暑いですね。", "映画を見に行きませんか？"]
+    assert split_sentences("我今天很忙！你呢？") == ["我今天很忙！", "你呢？"]
+
+
 def test_streamed_chunks_give_the_same_sentences():
     splitter = SentenceSplitter()
     chunks = ["¿Qué ", "más? To", "do bien. Cuesta 3", ".5 dólares, ¿sí o qué?"]

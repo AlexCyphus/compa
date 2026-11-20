@@ -178,7 +178,7 @@ class Conversation:
             async for sentence in reply.sentences():
                 self.speaker.say(sentence)
                 said.append(sentence)
-                if sentence.rstrip().endswith("?") or len(said) == MAX_SENTENCES:
+                if sentence.rstrip().endswith(("?", "？")) or len(said) == MAX_SENTENCES:
                     reply.stop_at(" ".join(said))  # one question per turn keeps it a conversation
                     break
             self.speaker.end_reply()

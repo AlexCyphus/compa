@@ -19,6 +19,12 @@ Everything runs locally except Claude: speech recognition (Whisper), voice detec
    ✏️  que estamos → que estuviéramos  Subjuntivo tras 'me gustaría que'
 ```
 
+## Languages
+
+🇪🇸 Spanish · 🇫🇷 French · 🇩🇪 German · 🇮🇹 Italian · 🇧🇷 Portuguese · 🇳🇱 Dutch · 🇵🇱 Polish · 🇷🇺 Russian · 🇺🇦 Ukrainian · 🇸🇪 Swedish · 🇳🇴 Norwegian · 🇩🇰 Danish · 🇹🇷 Turkish · 🇬🇷 Greek · 🇯🇵 Japanese · 🇰🇷 Korean · 🇨🇳 Mandarin · 🇮🇩 Indonesian · 🇻🇳 Vietnamese · 🇮🇳 Hindi
+
+Spanish, German and French come with a profile in `settings.json`. For the others, add one (see [Settings](#settings)).
+
 ## Setup
 
 ```bash
