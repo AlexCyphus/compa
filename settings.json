@@ -25,6 +25,25 @@
       "news_from": "Germany, Austria and Switzerland",
       "whisper_prompt": "Äh, also... naja, ich meine, hm, keine Ahnung."
     },
+    "english": {
+      "native_language": "Spanish",
+      "language": "en",
+      "language_name": "English",
+      "variety": "American English",
+      "level": "B2",
+      "voice": "kokoro:af_heart",
+      "news_from": "the United States",
+      "whisper_prompt": "Uh, well... like, you know, I mean, um. 'grapadora'..."
+    },
+    "catalan": {
+      "language": "ca",
+      "language_name": "Catalan",
+      "variety": "Central Catalan (Barcelona)",
+      "level": "B1",
+      "voice": "Montse",
+      "news_from": "Catalonia",
+      "whisper_prompt": "Eh... doncs, o sigui, bé, és que, eh, no ho sé."
+    },
     "french": {
       "language": "fr",
       "language_name": "French",

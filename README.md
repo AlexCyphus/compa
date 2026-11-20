@@ -21,9 +21,9 @@ Everything runs locally except Claude: speech recognition (Whisper), voice detec
 
 ## Languages
 
-🇪🇸 Spanish · 🇫🇷 French · 🇩🇪 German · 🇮🇹 Italian · 🇧🇷 Portuguese · 🇳🇱 Dutch · 🇵🇱 Polish · 🇷🇺 Russian · 🇺🇦 Ukrainian · 🇸🇪 Swedish · 🇳🇴 Norwegian · 🇩🇰 Danish · 🇹🇷 Turkish · 🇬🇷 Greek · 🇯🇵 Japanese · 🇰🇷 Korean · 🇨🇳 Mandarin · 🇮🇩 Indonesian · 🇻🇳 Vietnamese · 🇮🇳 Hindi
+🇪🇸 Spanish · 🇫🇷 French · 🇩🇪 German · 🇮🇹 Italian · 🇧🇷 Portuguese · 🇳🇱 Dutch · 🇵🇱 Polish · 🇷🇺 Russian · 🇺🇦 Ukrainian · 🇸🇪 Swedish · 🇳🇴 Norwegian · 🇩🇰 Danish · 🇹🇷 Turkish · 🇬🇷 Greek · 🇯🇵 Japanese · 🇰🇷 Korean · 🇨🇳 Mandarin · 🇮🇩 Indonesian · 🇻🇳 Vietnamese · 🇮🇳 Hindi · Catalan · 🇺🇸 English
 
-Spanish, German and French come with a profile in `settings.json`. For the others, add one (see [Settings](#settings)).
+Spanish, German, French, Catalan and English (for Spanish speakers) come with a profile in `settings.json`. For the others, add one (see [Settings](#settings)).
 
 ## Setup
 
@@ -89,7 +89,7 @@ History is kept in `sessions_folder` as `grades-<lang>.json` and `common-errors-
 | `clozemaster_collection` | optional: the Clozemaster collection (in this language) that "save that word" adds to |
 | `talker_model` / `corrector_model` | Claude models for the conversation (fast) and the corrections and report (careful) |
 
-To add a language, copy a profile and change these values. Kokoro has voices for Spanish, French, Italian, Portuguese, English, Japanese, Chinese and Hindi. For other languages, use a macOS voice. Premium macOS voices sound much better: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices.
+To add a language, copy a profile and change these values. Kokoro has voices for Spanish, French, Italian, Portuguese, English and Hindi. For other languages (including Japanese and Chinese), use a macOS voice. Premium macOS voices sound much better: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices.
 
 ## Develop
 

@@ -34,8 +34,9 @@ from compa.screen import Screen  # noqa: E402
 from compa.settings import load_profile  # noqa: E402
 from compa.speak import Speaker  # noqa: E402
 
-LEARNER_VOICES = {"es": "Eddy (Spanish (Mexico))", "de": "Eddy (German (Germany))", "fr": "Eddy (French (France))"}
-ENGLISH_VOICE = "Samantha"
+LEARNER_VOICES = {"es": "Eddy (Spanish (Mexico))", "de": "Eddy (German (Germany))", "fr": "Eddy (French (France))", "ca": "Montse",
+                  "en": "Eddy (English (US))"}
+NATIVE_VOICES = {"English": "Samantha", "Spanish": "Paulina"}
 PAUSE_TURN, BARGE_IN_TURN = 2, 4
 MID_THOUGHT_PAUSE_SECONDS = 0.7
 HESITATION_SECONDS = 0.5
@@ -44,7 +45,7 @@ WORD_GAP_SECONDS = 0.15
 LEARNER_PROMPT = """You role-play a {native} learner of {language} at about {level} level on a voice call with a friend.
 Reply to what the friend just said in 1-3 spoken sentences of {language}, engaging with the topic and sometimes
 asking something back. Make 1-2 natural learner mistakes per reply (agreement, prepositions, subjunctive, tense).
-Every second or third reply, use exactly one English word in place of a {language} word you "don't know",
+Every second or third reply, use exactly one {native} word in place of a {language} word you "don't know",
 written in square brackets, e.g. "compré un [lawnmower] nuevo". Output only the spoken line."""
 
 
@@ -77,7 +78,7 @@ class SimulatedLearner:
         return text.strip()
 
     def render(self, line: str) -> np.ndarray:
-        """Spoken audio of the line: [bracketed] words in an English voice, the rest in the learner voice."""
+        """Spoken audio of the line: [bracketed] words in a native-language voice, the rest in the learner voice."""
         pieces = [piece for piece in re.split(r"(\[[^\]]+\])", line) if piece.strip()]
         audio = []
         for piece in pieces:
@@ -88,10 +89,10 @@ class SimulatedLearner:
         return np.concatenate(audio)
 
     def _say(self, piece: str) -> np.ndarray:
-        english = piece.startswith("[")
+        native = piece.startswith("[")
         self._count += 1
         path = self.audio_dir / f"learner-{self._count}.wav"
-        subprocess.run(["say", "-v", ENGLISH_VOICE if english else self.voice, "-o", str(path),
+        subprocess.run(["say", "-v", NATIVE_VOICES[self.profile.native_language] if native else self.voice, "-o", str(path),
                         "--file-format=WAVE", f"--data-format=LEF32@{SAMPLE_RATE}", piece.strip("[]")], check=True)
         return _read_wav(path)
 

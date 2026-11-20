@@ -28,7 +28,10 @@ _ENGINE_SCRIPT = r"""
 ObjC.import('AppKit');
 ObjC.import('AVFoundation');
 function run([voiceName, rate, warmUpPath]) {
-  const voice = $.NSSpeechSynthesizer.availableVoices.js.map(v => v.js).find(v => v.endsWith('.' + voiceName));
+  // Matches the identifier's last part ("Montserrat") or the name `say -v '?'` lists ("Montse").
+  const listedName = v => ObjC.deepUnwrap($.NSSpeechSynthesizer.attributesForVoice(v)).VoiceName;
+  const voice = $.NSSpeechSynthesizer.availableVoices.js.map(v => v.js).find(v => v.endsWith('.' + voiceName)
+    || listedName(v) === voiceName || listedName(v).startsWith(voiceName + ' ('));
   if (!voice) throw new Error('Unknown voice: ' + voiceName);
   const synthesizer = $.NSSpeechSynthesizer.alloc.initWithVoice(voice);
   if (rate) synthesizer.rate = Number(rate);

@@ -83,8 +83,9 @@ class Reporter:
 
     async def report(self, history: list[tuple[str, str]], log: CallLog) -> ReportCard:
         known = _read(self.errors_file, {})
-        judged = await ask_for_json(self.profile.corrector_model, _instructions(self.profile),
-                                    _prompt(history, log, known)) or {}
+        instructions, prompt = _instructions(self.profile), _prompt(history, log, known)
+        judged = (await ask_for_json(self.profile.corrector_model, instructions, prompt)  # retry: rarely not JSON
+                  or await ask_for_json(self.profile.corrector_model, instructions, prompt) or {})
         scores = measured_scores(log, int(judged.get("range", 0)))
         patterns = self._remember_patterns(known, judged.get("patterns", []))
         previous = self._remember_grade(scores)

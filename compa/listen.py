@@ -31,6 +31,8 @@ UNFINISHED_ENDINGS = {
     "es": "eh em este pues o sea que de del el la los las un una unos unas y o pero porque como en con para por a al mi tu su muy más es",
     "de": "äh ähm hm also und oder aber weil dass der die das den dem ein eine einen einem mit für von zu in auf ist",
     "fr": "euh ben bah alors et ou mais parce que de du des le la les un une avec pour dans en à au mon ton son très",
+    "en": "uh um er like so and or but because that the a an of to in on with for my your his her very is",
+    "ca": "eh em doncs o sigui que de del el la els les un una uns unes i o però perquè com en amb per a al meu teu seu molt més és",
 }
 PARTIAL_EVERY = 1.0
 MIN_SPEECH = 0.25

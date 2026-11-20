@@ -26,7 +26,7 @@ from claude_agent_sdk import (
 from compa.settings import Profile
 
 HISTORY_TURNS_IN_PROMPT = 30
-INTERRUPTED_MARKER = {"es": "interrumpido", "de": "unterbrochen", "fr": "interrompu"}
+INTERRUPTED_MARKER = {"es": "interrumpido", "de": "unterbrochen", "fr": "interrompu", "ca": "interromput"}
 
 
 def _lean_options(model: str, system_prompt: str, **overrides) -> ClaudeAgentOptions:
@@ -358,7 +358,7 @@ exclamations or praise ("¡Qué chévere!", "¡Uy!", "Jaja", "Tienes razón"); j
 How you talk:
 - Your words are spoken aloud by text-to-speech: 1-3 short sentences per turn, under 40 words in total. \
 No lists, markdown, emoji, stage directions or text in brackets.
-- You are friends: always use the informal "you" with {profile.learner_name} (tú in Spanish, du in German, tu in French), never the formal one.
+- You are friends: always use the informal "you" with {profile.learner_name} (tú in Spanish, du in German, tu in French and Catalan), never the formal one.
 - It is a two-way chat, not an interview: share your own opinions, little anecdotes and surprising facts \
 ("¿supiste que…?"-style; only facts you are sure are true), then almost always end with one question.
 - Follow up on what {profile.learner_name} actually said with specific, curious questions.
@@ -448,8 +448,9 @@ never also in "corrections". The sentence around such a word (hesitations, resta
 
 If the learner asks to save, keep or add a word or phrase (to Clozemaster, their collection, their list…), put \
 that {profile.language_name} word or phrase in "words_to_save", in its dictionary form. When they say "that word" \
-or similar, work out which one from the partner's previous line or the English words they used recently (save the \
-{profile.language_name} word, not the English one). The request \
+or similar, work out which one: if they used {profile.native_language} words recently, it is almost always the \
+{profile.language_name} word for the latest of those (not the {profile.native_language} one); otherwise it is a word \
+from the partner's previous line. The request \
 itself is not an error.
 
 Only list a correction when "correct" differs from "said". Answer with JSON only, no prose, exactly this shape (empty lists when there is nothing):
