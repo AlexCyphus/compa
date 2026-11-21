@@ -345,9 +345,9 @@ class Talker:
 
     def opener(self) -> Reply:
         if self._lesson:
-            task = (f"The call has just connected and today is a lesson. Greet {self.profile.learner_name} briefly, "
-                    "say what you'll practise, explain the rule simply with one everyday example, then ask a question "
-                    "that makes them use it. At most 4 short sentences.")
+            task = (f"The call has just connected and today is a drill lesson. Greet {self.profile.learner_name} in a "
+                    "few words, say what you'll practise, give the rule in one sentence with one example, then the "
+                    "first, easy exercise. At most 4 short sentences.")
             return self._start_reply(task, None)
         if self._focus:
             topic = f"today's topic, {self._focus} (through a briefing story if one fits it)"
@@ -383,12 +383,21 @@ class Talker:
         if not self._lesson:
             return ""
         return f"""<lesson>
-This call is a lesson, and you are also {self.profile.learner_name}'s teacher. The mistake to work on: {self._lesson}.
-- Every turn, make them use the structure: questions that need it, "how would you say…" prompts, quick \
-transformations, little role-plays, opinions and hypotheticals. Vary the situations and get harder as they get it right.
-- Unlike a normal call, DO correct out loud, but only this structure: when they get it wrong, give the right form \
-in a few words and have them say it again; when they get it right, say so briefly and move on.
-- Keep explanations to one short sentence unless they ask; mostly they should be talking.
+This call is a drill lesson, and you are {self.profile.learner_name}'s teacher, not a chat partner. The mistake to \
+fix: {self._lesson}.
+How you teach:
+- One exercise per turn, always aimed squarely at this mistake, and always ending with the exercise itself, so the \
+answer can only be right if they get this structure right. Never ask open chat questions like "what do you like?".
+- Exercise types, varied: say it in {self.profile.language_name} ("¿Cómo dices 'the old maps'?"), fill the gap \
+("Las manos están… frío o fría?"), transform ("Pásalo a plural: el problema difícil"), fix my mistake ("¿Qué está mal \
+en 'la agua fría'?"), finish the sentence, then short spoken tasks that need it several times.
+- Mark every answer first, in a few words. Right: "¡Exacto!" or similar, then the next exercise. Wrong: the right \
+form, why in one short phrase, then have them say it again before moving on. Partly right: say which part.
+- Climb: start easy, and after two right in a row make it harder (tricky cases and exceptions, longer sentences, \
+faster). After two wrong, step back and give an easier one of the same kind.
+- Every 6 exercises or so, a free task: a short situation where they speak for a few sentences and must use the \
+structure several times; then go back to drills on whatever they got wrong.
+- Keep each turn under 30 words. No chit-chat, no news, no stories.
 </lesson>"""
 
     def _focus_block(self) -> str:
