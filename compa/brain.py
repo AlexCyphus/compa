@@ -490,7 +490,7 @@ class Corrector:
         recent = f"\nEnglish words the learner used recently: {', '.join(recent_english_words)}" if recent_english_words else ""
         try:
             await client.query(f'Partner\'s previous line: "{context}"{recent}\nLearner said: "{user_text}"')
-            return _parse_feedback(await _final_text(client))
+            return _parse_feedback(await _final_text(client), user_text)
         finally:
             self._pool.discard(client)
 
@@ -536,16 +536,32 @@ Only list a correction when "correct" differs from "said". Answer with JSON only
  "words_to_save": ["..."]}}"""
 
 
-def _parse_feedback(text: str) -> Feedback:
+def _parse_feedback(text: str, learner_text: str) -> Feedback:
     parsed = _parse_json(text, "{")
     if not isinstance(parsed, dict):
         return Feedback(corrections=[], english_words=[])
     corrections = _build_all(Correction, parsed.get("corrections"))
     return Feedback(
-        corrections=[correction for correction in corrections if correction.correct != correction.said],
+        corrections=[correction for correction in corrections
+                     if correction.correct != correction.said and not _corrected_later(correction, learner_text)],
         english_words=_build_all(EnglishWord, parsed.get("english_words")),
         words_to_save=[word for word in parsed.get("words_to_save") or [] if isinstance(word, str) and word.strip()],
     )
+
+
+def _corrected_later(correction: Correction, learner_text: str) -> bool:
+    """The learner fixed it themselves: the right form comes later in the turn ("te vas a hablar, o sea, vas a hablar").
+    Claude doesn't reliably spot self-repairs, so this is checked by hand."""
+    spoken, wrong, right = (_words_only(part) for part in (learner_text, correction.said, correction.correct))
+    wrong_at = spoken.find(wrong)
+    if not wrong or not right or wrong_at == -1:
+        return False
+    wrong_ends = wrong_at + len(wrong)
+    return any(match.end() > wrong_ends for match in re.finditer(re.escape(right), spoken) if match.start() > wrong_at)
+
+
+def _words_only(text: str) -> str:
+    return " ".join(re.findall(r"\w+", text.lower()))
 
 
 def _parse_json(text: str, opening: str):

@@ -7,7 +7,7 @@ import pytest_asyncio
 
 from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
 
-from compa.brain import ClaudeUnavailable, Corrector, Scout, SentenceSplitter, Talker, raise_if_unavailable, split_sentences
+from compa.brain import ClaudeUnavailable, Corrector, _parse_feedback, Scout, SentenceSplitter, Talker, raise_if_unavailable, split_sentences
 from compa.settings import load_profile
 
 SPANISH_HINTS = ("¿", "¡", "qué", "cómo", "parce", "usted", "tú", "vos", "más", "está", "bien", "hola")
@@ -197,3 +197,14 @@ def test_usage_limit_messages_become_claude_unavailable():
         with pytest.raises(ClaudeUnavailable):
             raise_if_unavailable(message)
     raise_if_unavailable(AssistantMessage(content=[TextBlock("Hola")], model=""))
+
+
+def test_a_correction_the_learner_already_made_themselves_is_dropped():
+    answer = json.dumps({"corrections": [
+        {"said": "te vas a hablar", "correct": "vas a hablar", "why": "ir a + infinitivo", "upgrade": False},
+        {"said": "mis errores es", "correct": "mis errores son", "why": "concordancia", "upgrade": False}],
+        "english_words": []})
+
+    feedback = _parse_feedback(answer, "No, te vas a hablar, o sea, vas a hablar con Chelsea, y mis errores es raros")
+
+    assert [correction.correct for correction in feedback.corrections] == ["mis errores son"]
