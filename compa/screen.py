@@ -133,7 +133,9 @@ class _LiveLine:
         if self.call_started_at is None:
             return Group(self._current)
         minutes, seconds = divmod(int(time.monotonic() - self.call_started_at), 60)
-        return Group(self._current, indented(Text(f"◷ {minutes:02d}:{seconds:02d}", style=FAINT), top=1))
+        footer = Text.assemble((f"◷ {minutes:02d}:{seconds:02d}", FAINT), ("   //   ", FAINT), ("CTRL-C", f"bold {MUTED}"),
+                               (" to hang up", FAINT))
+        return Group(self._current, indented(footer, top=1))
 
 
 def _row(speaker: Text, body: Text) -> Table:

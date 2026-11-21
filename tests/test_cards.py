@@ -56,7 +56,7 @@ def test_report_card_without_a_level_says_when_one_comes():
     assert "LEVEL AFTER 3 CALLS" in text
 
 
-def test_call_screen_shows_how_long_the_call_has_lasted(monkeypatch):
+def test_call_screen_shows_how_long_the_call_has_lasted_and_how_to_hang_up(monkeypatch):
     from rich.console import Console
     from rich.text import Text
 
@@ -72,4 +72,4 @@ def test_call_screen_shows_how_long_the_call_has_lasted(monkeypatch):
 
     console.print(screen._live_line)
 
-    assert "02:05" in console.export_text()
+    assert "02:05" in console.export_text() and "CTRL-C to hang up" in console.export_text()
