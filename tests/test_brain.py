@@ -143,6 +143,14 @@ async def test_corrector_leaves_a_clean_sentence_alone(corrector):
 
 
 @pytest.mark.asyncio
+async def test_corrector_accepts_a_self_correction_that_ends_up_right(corrector):
+    feedback = await corrector.check("Eh, hay algunos, algunas obras en el centro, pero no muchas",
+                                     context="¿Y qué hay para ver en tu ciudad?")
+    print(f"\n{feedback}")
+    assert [correction for correction in feedback.corrections if not correction.upgrade] == []
+
+
+@pytest.mark.asyncio
 async def test_corrector_spots_a_request_to_save_the_word_just_taught(corrector):
     feedback = await corrector.check(
         "Ah, no conocía esa palabra, guárdala en mi Clozemaster porfa",

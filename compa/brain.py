@@ -502,7 +502,9 @@ Their native language is {profile.native_language}. The text is a speech-recogni
 Flag every real error: grammar, agreement, gender, prepositions, ser/estar-type verb choice, mood (subjunctive), \
 tense, calques from {profile.native_language}, wrong word. Add an upgrade (upgrade: true) only rarely, when a clearly \
 more natural phrasing exists. Do not flag punctuation, capitalisation, accents, filler words or false starts, and \
-never invent errors when the text is fine. Suggest the phrasing used in {profile.variety}; never forms specific to \
+never invent errors when the text is fine. Self-corrections are not errors: when the learner restarts a word or phrase \
+and the final version is right ("hay algunos, algunas obras", "yo fui… iba"), it is correct, so don't list it; only \
+flag it if the version they settled on is still wrong. Suggest the phrasing used in {profile.variety}; never forms specific to \
 another region (for Colombian Spanish: no vosotros, "vale", "coger", "ordenador", "móvil").
 
 Also list every {profile.native_language} word or phrase the learner used in place of a {profile.language_name} \
