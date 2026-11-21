@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 CALLS_FOR_LEVEL = 5
+CALLS_BEFORE_LEVEL = 3  # one or two calls say too little to name a level
 # The report's range score is anchored A2 20, B1 40, B2 60, C1 80, native 100; levels split halfway between.
 LEVEL_FLOORS = [(90, "C2"), (70, "C1"), (50, "B2"), (30, "B1"), (10, "A2"), (0, "A1")]
 
@@ -22,10 +23,10 @@ def grades(folder: Path, language: str) -> list[dict]:
 
 
 def estimated_level(past_grades: list[dict]) -> str | None:
-    """CEFR level from the average range of the last few calls; None before the first call."""
-    recent = [grade["range"] for grade in past_grades[-CALLS_FOR_LEVEL:]]
-    if not recent:
+    """CEFR level from the average range of the last few calls; None until there have been CALLS_BEFORE_LEVEL."""
+    if len(past_grades) < CALLS_BEFORE_LEVEL:
         return None
+    recent = [grade["range"] for grade in past_grades[-CALLS_FOR_LEVEL:]]
     average = sum(recent) / len(recent)
     return next(level for floor, level in LEVEL_FLOORS if average >= floor)
 

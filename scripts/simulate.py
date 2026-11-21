@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, TextBlock  # noqa: E402
 
 from compa.account import use_claude_account  # noqa: E402
+from compa.cards import report_card  # noqa: E402
 from compa.conversation import Brain, Conversation  # noqa: E402
 from compa.progress import estimated_level, grades  # noqa: E402
 from compa.report import Reporter  # noqa: E402
@@ -201,8 +202,8 @@ async def main() -> None:
     report(conversation)
     test_profile = dataclasses.replace(profile, sessions_folder=work / "sessions")
     card = await Reporter(test_profile).report(conversation.talker.history, conversation.log)
-    Screen().report_card(card, profile.language_name,
-                         estimated_level(grades(test_profile.sessions_folder, test_profile.language)))
+    Screen().console.print(report_card(card, estimated_level(grades(test_profile.sessions_folder,
+                                                                    test_profile.language))))
     print("saved:", save_call(test_profile.sessions_folder, profile.language_name, conversation.talker.history,
                               conversation.log, card))
     print(f"audio in {work}")

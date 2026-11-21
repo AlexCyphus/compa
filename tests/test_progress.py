@@ -10,8 +10,8 @@ def test_level_comes_from_the_average_range_of_recent_calls():
     assert estimated_level(past) == "B2"
 
 
-def test_no_level_before_the_first_call():
-    assert estimated_level([]) is None
+def test_no_level_before_three_calls():
+    assert estimated_level([{"range": 60}] * 2) is None and estimated_level([{"range": 60}] * 3) == "B2"
 
 
 def test_mistakes_seen_in_the_most_calls_come_first(tmp_path):

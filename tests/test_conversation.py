@@ -272,7 +272,7 @@ async def test_english_word_and_correction_are_shown(call):
     await until(lambda: "que lo corte" in output.getvalue())
 
     shown = output.getvalue()
-    assert "🔤 lawnmower → podadora" in shown
+    assert "lawnmower → podadora" in shown
     assert shown.index("¿Y tú?") < shown.index("que lo corte"), "corrections wait for the reply to finish"
 
 
@@ -299,10 +299,10 @@ async def test_asking_to_save_a_word_adds_it_to_clozemaster(call):
     conversation, listener, talker, output = call
 
     await say(listener, SpeechStarted(), TurnEnded("Oye, guarda esa palabra en Clozemaster.", 2.0))
-    await until(lambda: "💾" in output.getvalue())
+    await until(lambda: "Saved to" in output.getvalue())
 
     assert conversation.clozemaster.saved == ["podadora"]
-    assert "💾 Saved to Books!: Compré una {{podadora}}." in output.getvalue()
+    assert "Saved to Books!: Compré una {{podadora}}." in output.getvalue()
 
 
 async def test_running_out_of_claude_usage_mid_reply_ends_the_call_with_a_message(call):
@@ -312,7 +312,7 @@ async def test_running_out_of_claude_usage_mid_reply_ends_the_call_with_a_messag
     await say(listener, SpeechStarted(), TurnEnded("Hoy fui al cine.", 2.0))
     await until(lambda: conversation.unavailable is not None)
 
-    assert "⛔" in output.getvalue() and "resets 5pm" in output.getvalue()
+    assert "Claude isn't answering" in output.getvalue() and "resets 5pm" in output.getvalue()
     assert conversation._hung_up.is_set()
 
 
