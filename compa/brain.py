@@ -301,6 +301,7 @@ class Talker:
         self._pool = _ClientPool(_lean_options(profile.talker_model, _persona(profile)), size=2)
         self._focus: str | None = None
         self._focus_words: list[str] = []
+        self._lesson: str | None = None
 
     async def start(self) -> None:
         await self._pool.start()
@@ -311,6 +312,11 @@ class Talker:
     def set_briefing(self, stories: list[Story]) -> None:
         self._briefing = list(stories)
 
+    def set_lesson(self, mistake: str, examples: list[str]) -> None:
+        """Make this call a lesson on a mistake the learner keeps making."""
+        shown = f" (corrected examples from their calls: {'; '.join(examples)})" if examples else ""
+        self._lesson = f"{mistake}{shown}"
+
     def set_focus(self, topic: str, words_already_used: list[str]) -> None:
         """The call's main topic, and the topic words the learner has already used in earlier calls."""
         self._focus, self._focus_words = topic, words_already_used
@@ -320,6 +326,11 @@ class Talker:
         return self._start_reply(task, user_text)
 
     def opener(self) -> Reply:
+        if self._lesson:
+            task = (f"The call has just connected and today is a lesson. Greet {self.profile.learner_name} briefly, "
+                    "say what you'll practise, explain the rule simply with one everyday example, then ask a question "
+                    "that makes them use it. At most 4 short sentences.")
+            return self._start_reply(task, None)
         if self._focus:
             topic = f"today's topic, {self._focus} (through a briefing story if one fits it)"
         elif self._briefing:
@@ -333,7 +344,7 @@ class Talker:
         return self._start_reply(task, None)
 
     def _start_reply(self, task: str, user_text: str | None) -> Reply:
-        blocks = (self._briefing_block(), self._focus_block(), self._history_block(), task)
+        blocks = (self._lesson_block() or self._briefing_block(), self._focus_block(), self._history_block(), task)
         prompt = "\n\n".join(part for part in blocks if part)
 
         def record(assistant_text: str) -> None:
@@ -349,6 +360,18 @@ class Talker:
             return ""
         lines = "\n".join(f"- {story.title}: {story.summary} (hook: {story.hook})" for story in self._briefing)
         return f"<briefing>\nThings you could bring up:\n{lines}\n</briefing>"
+
+    def _lesson_block(self) -> str:
+        if not self._lesson:
+            return ""
+        return f"""<lesson>
+This call is a lesson, and you are also {self.profile.learner_name}'s teacher. The mistake to work on: {self._lesson}.
+- Every turn, make them use the structure: questions that need it, "how would you say…" prompts, quick \
+transformations, little role-plays, opinions and hypotheticals. Vary the situations and get harder as they get it right.
+- Unlike a normal call, DO correct out loud, but only this structure: when they get it wrong, give the right form \
+in a few words and have them say it again; when they get it right, say so briefly and move on.
+- Keep explanations to one short sentence unless they ask; mostly they should be talking.
+</lesson>"""
 
     def _focus_block(self) -> str:
         if not self._focus:
@@ -389,7 +412,7 @@ No lists, markdown, emoji, stage directions or text in brackets.
 - Through your questions, invite {profile.level}-level language: hypotheticals ("what would you do if…"), \
 opinions and arguing a side, concessions, wishes and doubts that need the subjunctive.
 - When a thread runs dry, switch to something from the briefing or an interesting everyday topic.
-- Never correct {profile.learner_name}'s mistakes; corrections are shown separately on screen.
+- Never correct {profile.learner_name}'s mistakes (corrections are shown separately on screen), unless a <lesson> says otherwise.
 - If {profile.learner_name} uses a {profile.native_language} word, just use the {profile.language_name} word \
 naturally in your reply without making a fuss.
 - If {profile.learner_name} asks you to save a word to Clozemaster, an app on the call does it: just say \

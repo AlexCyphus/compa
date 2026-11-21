@@ -38,8 +38,12 @@ Compa uses the `claude` CLI login in `claude_config_dir` from `settings.json` (d
 ## Use
 
 ```bash
-compa              # first language in settings.json
-compa german
+compa              # menu: pick a language, then a call, a lesson or your progress
+compa german       # straight into a call
+compa spanish --topic fishing          # pick today's topic
+compa spanish --lesson subjuntivo      # a lesson on a mistake you keep making
+compa spanish --report                 # level, grades over time, latest report card, what to work on
+compa spanish --topics                 # every topic and how many of its words you've used
 compa spanish --end-silence 1.4   # wait longer before Compa takes its turn
 compa --mic "MacBook Pro Microphone"
 ```
@@ -52,6 +56,12 @@ compa --mic "MacBook Pro Microphone"
 - **Take your time:** after its hello, Compa only talks when you do. If you go quiet it just waits; say "pregúntame otra cosa" when you want a new question.
 - **Save a word:** say "guarda esa palabra en Clozemaster" (or name the word) and it's added as a cloze sentence to `clozemaster_collection` (`💾 Saved to Books!: …`). This uses the Clozemaster connector on your claude.ai account.
 - **Hang up** with Ctrl-C. You get a report card in the terminal, and the whole call is saved to `sessions_folder` as Markdown, with the conversation, corrections, English words and report card.
+
+## Topics, level and lessons
+
+- **Topics:** about 130 everyday topics, from fishing and hunting to taxes and paperwork. Every call has a focus topic you haven't covered yet, and Compa steers towards its vocabulary you haven't used. After the call, the topic words you used yourself are remembered (`topics-<lang>.json`). A topic is covered at 30 words.
+- **Level:** an approximate CEFR level from the range score of your last 5 calls.
+- **Lessons:** your recurring mistakes (subjunctive, gender agreement…) are listed in the menu and after each report card. A lesson is a call where Compa acts as your teacher: it explains the rule in a sentence, gets you using it, corrects that one structure out loud and has you say it again.
 
 ## How it stays snappy
 
