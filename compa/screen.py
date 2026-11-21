@@ -84,6 +84,9 @@ class Screen:
     def report_card(self, card: ReportCard) -> None:
         self.console.print(Panel(report_card_text(card), title="🤠 Report card", border_style="cyan", padding=(1, 2)))
 
+    def claude_unavailable(self, reason: BaseException) -> None:
+        self.console.print(Text(f"\n   ⛔ Claude isn't answering, so the call is over: {reason}", style="bold red"))
+
     def error(self, error: BaseException) -> None:
         self.console.print(Text(f"   ⚠️  {type(error).__name__}: {error}", style="red"))
 

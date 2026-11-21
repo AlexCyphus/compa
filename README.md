@@ -55,6 +55,7 @@ compa --mic "MacBook Pro Microphone"
 - **Don't know a word?** Say it in English. It shows up as `🔤 lawnmower → podadora`, and Compa uses the right word in its reply.
 - **Take your time:** after its hello, Compa only talks when you do. If you go quiet it just waits; say "pregúntame otra cosa" when you want a new question.
 - **Save a word:** say "guarda esa palabra en Clozemaster" (or name the word) and it's added as a cloze sentence to `clozemaster_collection` (`💾 Saved to Books!: …`). This uses the Clozemaster connector on your claude.ai account.
+- **Out of Claude usage?** Compa says so in the terminal (with when it resets, if Claude says), hangs up and saves the call. There's no report card that time, because it needs Claude too.
 - **Hang up** with Ctrl-C. You get a report card in the terminal, and the whole call is saved to `sessions_folder` as Markdown, with the conversation, corrections, English words and report card.
 
 ## Topics, level and lessons

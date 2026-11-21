@@ -49,6 +49,23 @@ def _lean_options(model: str, system_prompt: str, **overrides) -> ClaudeAgentOpt
     return ClaudeAgentOptions(**{**options, **overrides})
 
 
+class ClaudeUnavailable(Exception):
+    """Claude refused because the subscription's usage limit is reached (or billing or login failed)."""
+
+
+UNAVAILABLE_ERRORS = {"rate_limit", "billing_error", "authentication_failed"}
+USAGE_LIMIT_STATUS = 429
+
+
+def raise_if_unavailable(message) -> None:
+    """The CLI reports a usage limit as an error message instead of an exception; turn it into one."""
+    if isinstance(message, AssistantMessage) and message.error in UNAVAILABLE_ERRORS:
+        text = "".join(block.text for block in message.content if isinstance(block, TextBlock))
+        raise ClaudeUnavailable(text.strip() or message.error)
+    if isinstance(message, ResultMessage) and message.is_error and message.api_error_status == USAGE_LIMIT_STATUS:
+        raise ClaudeUnavailable((message.result or "usage limit reached").strip())
+
+
 def _text_delta(message) -> str | None:
     if not isinstance(message, StreamEvent):
         return None
@@ -276,6 +293,7 @@ class Reply:
         splitter = SentenceSplitter()
         await client.query(prompt)
         async for message in client.receive_response():
+            raise_if_unavailable(message)
             delta = _text_delta(message)
             if delta:
                 self._add_text(delta, splitter)
@@ -471,6 +489,7 @@ class Corrector:
 async def _final_text(client: ClaudeSDKClient) -> str:
     text = ""
     async for message in client.receive_response():
+        raise_if_unavailable(message)
         if isinstance(message, AssistantMessage):
             text += "".join(block.text for block in message.content if isinstance(block, TextBlock))
     return text
@@ -580,6 +599,7 @@ class Scout:
 
 async def _result_text(client: ClaudeSDKClient) -> str:
     async for message in client.receive_response():
+        raise_if_unavailable(message)
         if isinstance(message, ResultMessage):
             return message.result or ""
     return ""

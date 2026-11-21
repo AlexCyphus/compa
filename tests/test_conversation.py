@@ -6,7 +6,7 @@ import pytest
 from rich.console import Console
 
 from compa import conversation as conversation_module
-from compa.brain import Correction, EnglishWord, Feedback
+from compa.brain import ClaudeUnavailable, Correction, EnglishWord, Feedback
 from compa.clozemaster import SaveResult
 from compa.conversation import Brain, Conversation
 from compa.listen import Paused, SpeechStarted, TurnEnded
@@ -91,12 +91,14 @@ class FakeReply:
         self.talker = talker
         self.learner_text = learner_text
         self.lines = lines
-        self.full_text = " ".join(lines)
+        self.full_text = " ".join(line for line in lines if isinstance(line, str))
         self.cancelled = False
         self.committed: str | None = None
 
     async def sentences(self):
         for line in self.lines:
+            if isinstance(line, Exception):
+                raise line
             yield line
 
     def cancel(self):
@@ -149,6 +151,8 @@ class FakeCorrector:
 
     async def check(self, user_text, context, recent_english_words=()):
         await asyncio.sleep(0.1)
+        if "límite" in user_text:
+            raise ClaudeUnavailable("You've hit your limit · resets 5pm")
         if "guarda" in user_text:
             return Feedback([], [], ["podadora"])
         if "lawnmower" in user_text:
@@ -299,3 +303,23 @@ async def test_asking_to_save_a_word_adds_it_to_clozemaster(call):
 
     assert conversation.clozemaster.saved == ["podadora"]
     assert "💾 Saved to Books!: Compré una {{podadora}}." in output.getvalue()
+
+
+async def test_running_out_of_claude_usage_mid_reply_ends_the_call_with_a_message(call):
+    conversation, listener, talker, output = call
+    talker.reply = lambda text: talker._make(text, ["Claro.", ClaudeUnavailable("You've hit your limit · resets 5pm")])
+
+    await say(listener, SpeechStarted(), TurnEnded("Hoy fui al cine.", 2.0))
+    await until(lambda: conversation.unavailable is not None)
+
+    assert "⛔" in output.getvalue() and "resets 5pm" in output.getvalue()
+    assert conversation._hung_up.is_set()
+
+
+async def test_running_out_of_usage_in_the_corrections_also_ends_the_call(call):
+    conversation, listener, talker, output = call
+
+    await say(listener, SpeechStarted(), TurnEnded("Creo que llegué al límite.", 2.0))
+    await until(lambda: conversation.unavailable is not None)
+
+    assert "resets 5pm" in output.getvalue()

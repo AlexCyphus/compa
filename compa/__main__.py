@@ -12,10 +12,11 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 from compa.account import use_claude_account
+from compa.brain import ClaudeUnavailable
 from compa.conversation import Brain, Conversation
 from compa.listen import Listener, MicSource
 from compa.progress import Weakness, estimated_level, grades, weaknesses
-from compa.report import Reporter
+from compa.report import ReportCard, Reporter
 from compa.screen import Screen
 from compa.session_file import save_call
 from compa.settings import load_profile, profile_names
@@ -106,15 +107,25 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, top
             pass
     if not conversation.log.turns:
         return
+    if conversation.unavailable:
+        screen.console.print("   Your call is saved, but there's no report card this time: it needs Claude too.", style="dim")
+    card = None if conversation.unavailable else _report_card(profile, conversation, screen)
+    path = save_call(profile.sessions_folder, profile.language_name, conversation.talker.history, conversation.log, card)
+    screen.console.print(f"Saved to {path}", style="dim")
+
+
+def _report_card(profile, conversation: Conversation, screen: Screen) -> ReportCard | None:
     screen.console.print("\n👋 Writing your report card (about 20s, Ctrl-C again to skip it)…", style="dim")
     try:
         card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
-        screen.report_card(card)
-        _print_lessons(profile)
     except KeyboardInterrupt:
-        card = None
-    path = save_call(profile.sessions_folder, profile.language_name, conversation.talker.history, conversation.log, card)
-    screen.console.print(f"Saved to {path}", style="dim")
+        return None
+    except ClaudeUnavailable as reason:
+        screen.claude_unavailable(reason)
+        return None
+    screen.report_card(card)
+    _print_lessons(profile)
+    return card
 
 
 def _matching_weakness(profile, wanted: str) -> Weakness:

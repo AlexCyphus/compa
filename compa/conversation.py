@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from compa.brain import Corrector, Reply, Scout, Talker
+from compa.brain import ClaudeUnavailable, Corrector, Reply, Scout, Talker
 from compa.clozemaster import Clozemaster
 from compa.call_log import CallLog, TurnRecord
 from compa.listen import Listener, Partial, Paused, Resumed, SpeechStarted, TurnEnded
@@ -64,6 +64,8 @@ class Conversation:
         self._reply_to_learner: Reply | None = None
         self._unanswered_learner_text = ""
         self._background: set[asyncio.Task] = set()
+        self.unavailable: ClaudeUnavailable | None = None
+        self._hung_up = asyncio.Event()
         speaker.on_sentence_started = self._sentence_started
 
     async def run(self) -> None:
@@ -74,6 +76,15 @@ class Conversation:
         self.screen.status("")
         self._spawn(self.speaker.run())
         self._speak(self.talker.opener())
+        listening = asyncio.create_task(self._listen())
+        hung_up = asyncio.create_task(self._hung_up.wait())
+        done, _ = await asyncio.wait({listening, hung_up}, return_when=asyncio.FIRST_COMPLETED)
+        listening.cancel()
+        hung_up.cancel()
+        if listening in done:
+            listening.result()
+
+    async def _listen(self) -> None:
         async for event in self.listener.events():
             match event:
                 case SpeechStarted() | Resumed():
@@ -223,5 +234,17 @@ class Conversation:
 
     def _finished(self, task: asyncio.Task) -> None:
         self._background.discard(task)
-        if not task.cancelled() and task.exception() is not None:
+        if task.cancelled() or task.exception() is None:
+            return
+        if isinstance(task.exception(), ClaudeUnavailable):
+            self._hang_up(task.exception())
+        else:
             self.screen.error(task.exception())
+
+    def _hang_up(self, reason: ClaudeUnavailable) -> None:
+        """Out of Claude usage: stop talking and end the call instead of going silent."""
+        if self.unavailable is None:
+            self.unavailable = reason
+            self.speaker.interrupt()
+            self.screen.claude_unavailable(reason)
+        self._hung_up.set()

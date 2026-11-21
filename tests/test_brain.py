@@ -5,7 +5,9 @@ from datetime import date
 import pytest
 import pytest_asyncio
 
-from compa.brain import Corrector, Scout, SentenceSplitter, Talker, split_sentences
+from claude_agent_sdk import AssistantMessage, ResultMessage, TextBlock
+
+from compa.brain import ClaudeUnavailable, Corrector, Scout, SentenceSplitter, Talker, raise_if_unavailable, split_sentences
 from compa.settings import load_profile
 
 SPANISH_HINTS = ("¿", "¡", "qué", "cómo", "parce", "usted", "tú", "vos", "más", "está", "bien", "hola")
@@ -176,3 +178,14 @@ async def test_scout_finds_stories_and_caches_them(profile, tmp_path):
     assert all(story.title and story.summary and story.hook for story in stories)
     cache_file = tmp_path / f"{date.today().isoformat()}-es.json"
     assert len(json.loads(cache_file.read_text())) == len(stories)
+
+
+def test_usage_limit_messages_become_claude_unavailable():
+    limit = AssistantMessage(content=[TextBlock("You've hit your limit · resets 5pm")], model="", error="rate_limit")
+    failed_result = ResultMessage(subtype="success", duration_ms=0, duration_api_ms=0, is_error=True, num_turns=1,
+                                  session_id="", result="Usage limit reached", api_error_status=429)
+
+    for message in (limit, failed_result):
+        with pytest.raises(ClaudeUnavailable):
+            raise_if_unavailable(message)
+    raise_if_unavailable(AssistantMessage(content=[TextBlock("Hola")], model=""))
