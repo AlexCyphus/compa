@@ -9,12 +9,14 @@ os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 warnings.filterwarnings("ignore")
 
 from rich.console import Console
-from rich.markdown import Markdown
+from rich.text import Text
 
 from compa.account import use_claude_account
 from compa.brain import ClaudeUnavailable
+from compa.cards import ACCENT, MUTED, progress_card
 from compa.conversation import Brain, Conversation
 from compa.listen import Listener, MicSource
+from compa.menu import pick
 from compa.progress import Weakness, estimated_level, grades, weaknesses
 from compa.report import ReportCard, Reporter
 from compa.screen import Screen
@@ -24,12 +26,16 @@ from compa.topics import WORDS_FOR_COVERED, TopicMemory
 from compa.speak import Speaker
 
 CACHE = Path("~/.cache/compa").expanduser()
-MENU_LESSONS = 3
+NEXT_LESSONS = 3
+CALL, LESSON, PROGRESS = "call", "lesson", "progress"
 
 
 def main() -> None:
     arguments = _arguments()
-    profile = load_profile(arguments.language or _ask_language())
+    language = arguments.language or _ask_language()
+    if language is None:
+        return
+    profile = load_profile(language)
     topics = TopicMemory(profile.sessions_folder, profile.language)
     if arguments.topics:
         _print_topics(topics)
@@ -43,50 +49,45 @@ def main() -> None:
         _menu(profile, topics, arguments)
 
 
-def _ask_language() -> str:
-    names = profile_names()
-    print("🤠 Compa\n")
-    for number, name in enumerate(names, 1):
-        print(f"  {number}. {name.capitalize()}")
-    return names[_ask_number("\nWhich language? ", len(names)) - 1]
+def _ask_language() -> str | None:
+    """The chosen profile name, each one shown with its level; None to quit."""
+    print()
+    return pick("Language", [(_language_label(name), name) for name in profile_names()])
+
+
+def _language_label(name: str) -> str:
+    profile = load_profile(name)
+    level = estimated_level(grades(profile.sessions_folder, profile.language))
+    return f"{profile.language_name:<12}{level or ''}"
 
 
 def _menu(profile, topics: TopicMemory, arguments: argparse.Namespace) -> None:
-    """Pick what to do: a call, a lesson on a recurring mistake, or a look at your progress."""
+    """Pick what to do: a call, a lesson on a recurring mistake, or a look at your progress. Esc quits."""
     while True:
-        level = estimated_level(grades(profile.sessions_folder, profile.language))
-        lessons = weaknesses(profile.sessions_folder, profile.language)[:MENU_LESSONS]
-        topic = topics.next_topic()
-        calls = len(grades(profile.sessions_folder, profile.language))
-        print(f"\n🤠 {profile.language_name}" + (f" · your level ≈ {level} (from {calls} calls)" if level else ""))
-        options = [(f"Start a call (today's topic: {topic})", lambda: _start_call(profile, topics, arguments, topic=topic))]
-        options += [(f"Lesson: {weakness.pattern} (in {weakness.calls} calls)",
-                     lambda weakness=weakness: _start_call(profile, topics, arguments, lesson=weakness))
-                    for weakness in lessons]
-        options += [("Progress and last report card", lambda: _print_report(profile, topics)),
-                    ("Topics", lambda: _print_topics(topics))]
-        for number, (label, _) in enumerate(options, 1):
-            print(f"  {number}. {label}")
-        choice = _ask_number("\nWhat now? (Enter to quit) ", len(options), allow_empty=True)
+        choice = pick("What now?", [("Start a call", CALL), ("Lesson to improve on a weakness", LESSON),
+                                    ("Progress", PROGRESS)])
         if choice is None:
             return
-        label, action = options[choice - 1]
-        action()
-        if label.startswith(("Start", "Lesson")):
-            return
+        if choice == PROGRESS:
+            _print_report(profile, topics)
+            continue
+        lesson = _pick_weakness(profile) if choice == LESSON else None
+        if choice == LESSON and lesson is None:
+            continue
+        _start_call(profile, topics, arguments, lesson=lesson)
+        return
 
 
-def _ask_number(question: str, highest: int, allow_empty: bool = False) -> int | None:
-    while True:
-        answer = input(question).strip()
-        if not answer and allow_empty:
-            return None
-        if answer.isdigit() and 1 <= int(answer) <= highest:
-            return int(answer)
+def _pick_weakness(profile) -> Weakness | None:
+    """A recurring mistake to have a lesson on; None to go back to the menu."""
+    found = weaknesses(profile.sessions_folder, profile.language)
+    if not found:
+        Console().print(Text("  No weaknesses yet. They show up after your first call.\n", style=MUTED))
+        return None
+    return pick("Which one?", [(weakness.pattern, weakness) for weakness in found] + [("← Back", None)])
 
 
-def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, topic: str | None = None,
-                lesson: Weakness | None = None) -> None:
+def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, lesson: Weakness | None = None) -> None:
     account = use_claude_account(profile)
     with Screen() as screen:
         screen.console.print(f"🤠 Compa · {profile.language_name} · Claude: {account}", style="dim")
@@ -97,7 +98,7 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, top
             conversation.talker.set_lesson(lesson.pattern, lesson.examples)
             screen.console.print(f"   🎓 Lesson: {lesson.pattern}", style="dim")
         else:
-            topic = topic or (_matching_topic(topics, arguments.topic) if arguments.topic else topics.next_topic())
+            topic = _matching_topic(topics, arguments.topic) if arguments.topic else topics.next_topic()
             conversation.talker.set_focus(topic, topics.words(topic))
             screen.console.print(f"   🎯 Today's topic: {topic} ({len(topics.words(topic))}/{WORDS_FOR_COVERED} words)",
                                  style="dim")
@@ -111,21 +112,33 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, top
         screen.console.print("   Your call is saved, but there's no report card this time: it needs Claude too.", style="dim")
     card = None if conversation.unavailable else _report_card(profile, conversation, screen)
     path = save_call(profile.sessions_folder, profile.language_name, conversation.talker.history, conversation.log, card)
-    screen.console.print(f"Saved to {path}", style="dim")
+    screen.console.print(Text(f"  Saved to {path}\n", style=MUTED))
+    lesson = _pick_next_lesson(profile) if card else None
+    if lesson:
+        _start_call(profile, topics, arguments, lesson=lesson)
 
 
 def _report_card(profile, conversation: Conversation, screen: Screen) -> ReportCard | None:
-    screen.console.print("\n👋 Writing your report card (about 20s, Ctrl-C again to skip it)…", style="dim")
+    print()
     try:
-        card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
+        with screen.console.status(Text("Writing your report card  ·  Ctrl-C to skip", style=MUTED),
+                                   spinner_style=ACCENT):
+            card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
     except KeyboardInterrupt:
         return None
     except ClaudeUnavailable as reason:
         screen.claude_unavailable(reason)
         return None
-    screen.report_card(card)
-    _print_lessons(profile)
+    screen.report_card(card, profile.language_name, estimated_level(grades(profile.sessions_folder, profile.language)))
     return card
+
+
+def _pick_next_lesson(profile) -> Weakness | None:
+    """After the report card: a lesson on one of the top recurring mistakes, or None to finish."""
+    lessons = weaknesses(profile.sessions_folder, profile.language)[:NEXT_LESSONS]
+    if not lessons:
+        return None
+    return pick("Next", [(f"Lesson: {weakness.pattern}", weakness) for weakness in lessons] + [("Done", None)])
 
 
 def _matching_weakness(profile, wanted: str) -> Weakness:
@@ -134,15 +147,6 @@ def _matching_weakness(profile, wanted: str) -> Weakness:
     lowered = wanted.lower()
     return next((weakness for weakness in found if lowered in weakness.id.lower() or lowered in weakness.pattern.lower()),
                 Weakness(wanted, wanted, 0, []))
-
-
-def _print_lessons(profile) -> None:
-    lessons = weaknesses(profile.sessions_folder, profile.language)[:MENU_LESSONS]
-    if lessons:
-        print("\nWork on:")
-        for weakness in lessons:
-            print(f"  • {weakness.pattern} (in {weakness.calls} calls) → compa {profile.language_name.lower()} "
-                  f"--lesson {weakness.id}")
 
 
 def _matching_topic(topics: TopicMemory, wanted: str) -> str:
@@ -158,23 +162,16 @@ def _print_topics(topics: TopicMemory) -> None:
 
 
 def _print_report(profile, topics: TopicMemory) -> None:
-    """Your grade over time, how far through the topics you are, and the latest call's report card."""
+    """Your level, how your grade has gone, the latest scores and the mistakes to work on."""
     console = Console()
     past = grades(profile.sessions_folder, profile.language)
     if not past:
-        console.print(f"No {profile.language_name} calls yet.")
+        console.print(Text(f"\n  No {profile.language_name} calls yet.\n", style=MUTED))
         return
-    console.print(f"[bold]{profile.language_name}[/] · your level ≈ {estimated_level(past)} · {len(past)} calls · grades: "
-                  + " → ".join(str(grade["overall"]) for grade in past[-10:]))
     covered = sum(len(topics.words(topic)) >= WORDS_FOR_COVERED for topic in topics.all_topics())
     started = sum(bool(topics.words(topic)) for topic in topics.all_topics())
-    console.print(f"Topics: {covered} covered, {started} started, of {len(topics.all_topics())} (compa --topics)\n")
-    calls = sorted(profile.sessions_folder.glob(f"* {profile.language_name}*.md"))
-    if calls:
-        card = calls[-1].read_text().split("# Conversation")[0]
-        console.print(Markdown(card))
-        console.print(f"\n{calls[-1]}", style="dim")
-    _print_lessons(profile)
+    console.print(progress_card(profile.language_name, estimated_level(past), past,
+                                weaknesses(profile.sessions_folder, profile.language), covered, started))
 
 
 def _built_in_mic() -> str | None:
@@ -196,8 +193,8 @@ def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="compa", description="Voice chat practice partner.")
     parser.add_argument("language", nargs="?", choices=profile_names(), help="language profile from settings.json")
     parser.add_argument("--topic", help='talk about this topic today, e.g. "fishing" (default: one you haven\'t covered)')
-    parser.add_argument("--lesson", help='a lesson on a mistake you keep making, e.g. "subjuntivo" or an id from --report')
-    parser.add_argument("--report", action="store_true", help="show your grades over time and the latest report card")
+    parser.add_argument("--lesson", help='a lesson on a mistake you keep making, e.g. "subjuntivo"')
+    parser.add_argument("--report", action="store_true", help="show your level, your grade over time and what to work on")
     parser.add_argument("--topics", action="store_true", help="list every topic and how many of its words you've used")
     parser.add_argument("--mic", help="input device name or index (default: the MacBook microphone, else the system input)")
     parser.add_argument("--end-silence", type=float, default=1.0,

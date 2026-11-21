@@ -1,15 +1,14 @@
 """Terminal output: the conversation, a live line of what the learner is saying, and feedback under each turn."""
 import sys
 
-from rich.console import Console, Group
-from rich.panel import Panel
+from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
 from compa.brain import Correction, Feedback, Story
 from compa.clozemaster import SaveResult
+from compa import cards
 from compa.report import ReportCard
-from compa.topics import WORDS_FOR_COVERED
 
 
 class Screen:
@@ -81,8 +80,9 @@ class Screen:
     def briefing_ready(self, stories: list[Story]) -> None:
         self.console.print(Text(f"   📰 {len(stories)} fresh topics ready", style="dim"))
 
-    def report_card(self, card: ReportCard) -> None:
-        self.console.print(Panel(report_card_text(card), title="🤠 Report card", border_style="cyan", padding=(1, 2)))
+    def report_card(self, card: ReportCard, language_name: str, level: str | None) -> None:
+        self.console.print()
+        self.console.print(cards.report_card(card, language_name, level))
 
     def claude_unavailable(self, reason: BaseException) -> None:
         self.console.print(Text(f"\n   ⛔ Claude isn't answering, so the call is over: {reason}", style="bold red"))
@@ -94,35 +94,3 @@ class Screen:
         self._compa_line_open = False
         held, self._held_corrections = self._held_corrections, []
         self._print_corrections(held)
-
-
-def report_card_text(card: ReportCard) -> Group:
-    """The report card as printed after hanging up."""
-    scores = card.scores
-    change = "" if card.previous_overall is None else f"  ({scores.overall - card.previous_overall:+d} since last call)"
-    lines: list = [
-        Text.assemble(("Grade ", "bold"), (f"{scores.overall}%", "bold green"), (change, "dim")),
-        Text(f"Accuracy {scores.accuracy} · Range {scores.range} · Fluency {scores.fluency}   "
-             f"{card.minutes_talking} min talking · {card.words_per_minute} words/min", style="dim"),
-    ]
-    if card.summary:
-        lines += [Text(""), Text(card.summary)]
-    if card.patterns:
-        lines += [Text(""), Text("Common errors", style="bold yellow")]
-        lines += [Text.assemble((f"  • {p.pattern}", "yellow"), (f"  ×{p.times_seen}" if p.times_seen > 1 else "", "bold red"),
-                                (f"  {' · '.join(p.examples)}", "dim")) for p in card.patterns]
-    if card.english_words:
-        lines += [Text(""), Text("Words you said in English", style="bold magenta")]
-        lines += [Text(f"  • {w.said} → {w.target}", style="magenta") for w in card.english_words]
-    if card.phrases_to_try:
-        lines += [Text(""), Text("Try next time", style="bold blue")]
-        lines += [Text(f"  • {phrase}", style="blue") for phrase in card.phrases_to_try]
-    if card.topics:
-        lines += [Text(""), Text("Topics", style="bold cyan")]
-        lines += [Text.assemble((f"  • {t.topic}", "cyan"), (f"  {min(t.words_used, WORDS_FOR_COVERED)}/{WORDS_FOR_COVERED} words", "bold cyan"),
-                                (f"  (+{t.new_words} new)" if t.new_words else "", "dim"), ("  ✓ covered" if t.covered else "", "bold green"))
-                  for t in card.topics]
-    if card.strengths:
-        lines += [Text(""), Text("Went well", style="bold green")]
-        lines += [Text(f"  • {strength}", style="green") for strength in card.strengths]
-    return Group(*lines)
