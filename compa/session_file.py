@@ -5,6 +5,7 @@ from pathlib import Path
 from compa.brain import Feedback
 from compa.call_log import CallLog
 from compa.report import ReportCard
+from compa.topics import WORDS_FOR_COVERED
 
 
 def save_call(folder: Path, language: str, history: list[tuple[str, str]], log: CallLog,
@@ -23,6 +24,7 @@ def _report_card(card: ReportCard) -> str:
              f"Accuracy {scores.accuracy} · Range {scores.range} · Fluency {scores.fluency} · "
              f"{card.minutes_talking} min talking · {card.words_per_minute} words/min", "", card.summary, ""]
     sections = [("Common errors", [f"{p.pattern} (×{p.times_seen}): {' · '.join(p.examples)}" for p in card.patterns]),
+                ("Topics", [f"{t.topic}: {t.words_used}/{WORDS_FOR_COVERED} words (+{t.new_words} new)" for t in card.topics]),
                 ("Try next time", card.phrases_to_try), ("Went well", card.strengths)]
     for title, items in sections:
         if items:

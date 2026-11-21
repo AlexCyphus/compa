@@ -5,13 +5,14 @@ something. Recurring patterns and past grades live next to the saved calls, one 
 """
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
 
 from compa.brain import EnglishWord, ask_for_json
 from compa.call_log import CallLog
 from compa.settings import Profile
+from compa.topics import TopicMemory, TopicProgress
 
 WEIGHTS = {"accuracy": 0.35, "range": 0.35, "fluency": 0.30}
 SLOW_WORDS_PER_MINUTE, FLUENT_WORDS_PER_MINUTE = 50, 130
@@ -49,6 +50,7 @@ class ReportCard:
     strengths: list[str]
     phrases_to_try: list[str]
     summary: str
+    topics: list[TopicProgress] = field(default_factory=list)
 
 
 def learner_words(log: CallLog) -> int:
@@ -80,10 +82,11 @@ class Reporter:
         folder = profile.sessions_folder
         self.errors_file = folder / f"common-errors-{profile.language}.json"
         self.grades_file = folder / f"grades-{profile.language}.json"
+        self.topic_memory = TopicMemory(folder, profile.language)
 
     async def report(self, history: list[tuple[str, str]], log: CallLog) -> ReportCard:
         known = _read(self.errors_file, {})
-        instructions, prompt = _instructions(self.profile), _prompt(history, log, known)
+        instructions, prompt = _instructions(self.profile), _prompt(history, log, known, self.topic_memory.all_topics())
         judged = (await ask_for_json(self.profile.corrector_model, instructions, prompt)  # retry: rarely not JSON
                   or await ask_for_json(self.profile.corrector_model, instructions, prompt) or {})
         scores = measured_scores(log, int(judged.get("range", 0)))
@@ -99,6 +102,7 @@ class Reporter:
             strengths=judged.get("strengths", []),
             phrases_to_try=judged.get("phrases_to_try", []),
             summary=judged.get("summary", ""),
+            topics=self._remember_topics(judged.get("topics", [])),
         )
 
     def _remember_patterns(self, known: dict, found: list[dict]) -> list[Pattern]:
@@ -114,6 +118,12 @@ class Reporter:
         _write(self.errors_file, known)
         return sorted(patterns, key=lambda pattern: -pattern.times_seen)
 
+    def _remember_topics(self, found: list[dict]) -> list[TopicProgress]:
+        progress = [self.topic_memory.record(item["topic"], [w for w in item.get("words", []) if isinstance(w, str)])
+                    for item in found if isinstance(item, dict) and item.get("topic")]
+        self.topic_memory.save()
+        return progress
+
     def _remember_grade(self, scores: Scores) -> int | None:
         grades = _read(self.grades_file, [])
         previous = grades[-1]["overall"] if grades else None
@@ -127,7 +137,7 @@ def _instructions(profile: Profile) -> str:
 {profile.language_name} ({profile.variety}) at {profile.level} level on a voice call. Answer with JSON only."""
 
 
-def _prompt(history: list[tuple[str, str]], log: CallLog, known: dict) -> str:
+def _prompt(history: list[tuple[str, str]], log: CallLog, known: dict, topics: list[str]) -> str:
     conversation = "\n".join(f"{'Learner' if role == 'user' else 'Partner'}: {text}" for role, text in history)
     corrections = [asdict(c) for turn in log.turns if turn.feedback for c in turn.feedback.corrections]
     known_patterns = {pattern_id: entry["pattern"] for pattern_id, entry in known.items()}
@@ -140,6 +150,9 @@ def _prompt(history: list[tuple[str, str]], log: CallLog, known: dict) -> str:
 <patterns_seen_in_earlier_calls>
 {json.dumps(known_patterns, ensure_ascii=False)}
 </patterns_seen_in_earlier_calls>
+<topic_list>
+{json.dumps(topics, ensure_ascii=False)}
+</topic_list>
 
 Return exactly this JSON shape:
 {{"range": <0-100: the range of grammar and vocabulary the learner actually used, CEFR-anchored: A2 20, B1 40, \
@@ -149,9 +162,12 @@ same kind of mistake>", "pattern": "<short name of the mistake, at most 30 chara
 form>", ...]}}],
  "strengths": ["<something the learner did well>", ...],
  "phrases_to_try": ["<a natural phrase or structure that would have fit what they wanted to say>", ...],
- "summary": "<2 sentences: how the call went and the one thing to focus on next time>"}}
-At most 4 patterns (most frequent first, real errors only, not upgrades), 3 strengths and 4 phrases. \
-Everything except ids is written in the learner's target language, short and concrete."""
+ "summary": "<2 sentences: how the call went and the one thing to focus on next time>",
+ "topics": [{{"topic": "<a topic from topic_list that was really talked about, spelled exactly as listed; a new \
+short English name only if none fits>", "words": ["<a topic-specific word or phrase the learner themself said, \
+correctly, in dictionary form, e.g. 'caña de pescar', 'anzuelo'; not everyday words like 'casa' or 'bueno'>", ...]}}]}}
+At most 4 patterns (most frequent first, real errors only, not upgrades), 3 strengths, 4 phrases and 3 topics. \
+Everything except ids and topic names is written in the learner's target language, short and concrete."""
 
 
 def _read(path: Path, default):

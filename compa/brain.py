@@ -24,6 +24,7 @@ from claude_agent_sdk import (
 )
 
 from compa.settings import Profile
+from compa.topics import WORDS_SHOWN_TO_COMPA
 
 HISTORY_TURNS_IN_PROMPT = 30
 INTERRUPTED_MARKER = {"es": "interrumpido", "de": "unterbrochen", "fr": "interrompu", "ca": "interromput"}
@@ -298,6 +299,8 @@ class Talker:
         self.history: list[tuple[str, str]] = []
         self._briefing: list[Story] = []
         self._pool = _ClientPool(_lean_options(profile.talker_model, _persona(profile)), size=2)
+        self._focus: str | None = None
+        self._focus_words: list[str] = []
 
     async def start(self) -> None:
         await self._pool.start()
@@ -308,12 +311,21 @@ class Talker:
     def set_briefing(self, stories: list[Story]) -> None:
         self._briefing = list(stories)
 
+    def set_focus(self, topic: str, words_already_used: list[str]) -> None:
+        """The call's main topic, and the topic words the learner has already used in earlier calls."""
+        self._focus, self._focus_words = topic, words_already_used
+
     def reply(self, user_text: str) -> Reply:
         task = f'{self.profile.learner_name} just said: "{user_text}"\nReply now.'
         return self._start_reply(task, user_text)
 
     def opener(self) -> Reply:
-        topic = "one interesting story from the briefing" if self._briefing else f"something about {random.choice(SPARKS)}"
+        if self._focus:
+            topic = f"today's topic, {self._focus} (through a briefing story if one fits it)"
+        elif self._briefing:
+            topic = "one interesting story from the briefing"
+        else:
+            topic = f"something about {random.choice(SPARKS)}"
         task = (
             f"The call has just connected. Greet {self.profile.learner_name} warmly, then bring up {topic} "
             "and ask a question about it, all in 2-3 short sentences."
@@ -321,7 +333,8 @@ class Talker:
         return self._start_reply(task, None)
 
     def _start_reply(self, task: str, user_text: str | None) -> Reply:
-        prompt = "\n\n".join(part for part in (self._briefing_block(), self._history_block(), task) if part)
+        blocks = (self._briefing_block(), self._focus_block(), self._history_block(), task)
+        prompt = "\n\n".join(part for part in blocks if part)
 
         def record(assistant_text: str) -> None:
             if user_text is not None:
@@ -336,6 +349,17 @@ class Talker:
             return ""
         lines = "\n".join(f"- {story.title}: {story.summary} (hook: {story.hook})" for story in self._briefing)
         return f"<briefing>\nThings you could bring up:\n{lines}\n</briefing>"
+
+    def _focus_block(self) -> str:
+        if not self._focus:
+            return ""
+        used = ", ".join(self._focus_words[-WORDS_SHOWN_TO_COMPA:]) or "none yet"
+        return f"""<todays_topic>
+{self._focus}. Keep coming back to it and explore different sides of it (situations, gear, places, people, \
+stories, opinions), so {self.profile.learner_name} needs a wide range of its vocabulary. Steer towards words they \
+haven't used yet. If they change the subject, go with it for a bit, then find a natural way back.
+Topic words they have already used in earlier calls: {used}
+</todays_topic>"""
 
     def _history_block(self) -> str:
         if not self.history:

@@ -9,6 +9,7 @@ from rich.text import Text
 from compa.brain import Correction, Feedback, Story
 from compa.clozemaster import SaveResult
 from compa.report import ReportCard
+from compa.topics import WORDS_FOR_COVERED
 
 
 class Screen:
@@ -113,6 +114,11 @@ def report_card_text(card: ReportCard) -> Group:
     if card.phrases_to_try:
         lines += [Text(""), Text("Try next time", style="bold blue")]
         lines += [Text(f"  • {phrase}", style="blue") for phrase in card.phrases_to_try]
+    if card.topics:
+        lines += [Text(""), Text("Topics", style="bold cyan")]
+        lines += [Text.assemble((f"  • {t.topic}", "cyan"), (f"  {min(t.words_used, WORDS_FOR_COVERED)}/{WORDS_FOR_COVERED} words", "bold cyan"),
+                                (f"  (+{t.new_words} new)" if t.new_words else "", "dim"), ("  ✓ covered" if t.covered else "", "bold green"))
+                  for t in card.topics]
     if card.strengths:
         lines += [Text(""), Text("Went well", style="bold green")]
         lines += [Text(f"  • {strength}", style="green") for strength in card.strengths]
