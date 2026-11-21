@@ -60,6 +60,8 @@ def header(context: str) -> Table:
 def show_screen(console: Console, context: str) -> None:
     """Clears the terminal and starts a fresh screen with the header, so screens replace each other."""
     console.clear()
+    console.file.write("\x1b[3J")  # clear() leaves the old screen in the scrollback; this drops it
+    console.file.flush()
     print_header(console, context)
 
 

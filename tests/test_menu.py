@@ -39,7 +39,11 @@ def press(monkeypatch, screen):
 @pytest.fixture
 def calls(monkeypatch):
     started = []
-    monkeypatch.setattr(app, "_start_call", lambda profile, topics, arguments, lesson=None: started.append(lesson))
+    def start_call(profile, topics, arguments, lesson=None):
+        started.append(lesson)
+        return app.QUIT
+
+    monkeypatch.setattr(app, "_start_call", start_call)
     return started
 
 
@@ -49,12 +53,18 @@ def learner(folder, mistakes=None):
     return SimpleNamespace(sessions_folder=folder, language="es", language_name="Spanish")
 
 
-def test_escape_quits_the_menu_without_starting_a_call(tmp_path, press, calls):
+def test_escape_on_the_menu_goes_back_to_the_language_picker(tmp_path, press, calls):
     press(ESCAPE)
 
-    app._menu(learner(tmp_path), None, None)
+    assert app._menu(learner(tmp_path), None, None) == app.LANGUAGES and calls == []
 
-    assert calls == []
+
+def test_the_menu_can_change_language_or_quit(tmp_path, press):
+    press(UP + UP + ENTER)
+    assert app._menu(learner(tmp_path), None, None) == app.LANGUAGES
+
+    press(UP + ENTER)
+    assert app._menu(learner(tmp_path), None, None) == app.QUIT
 
 
 def test_start_a_call_starts_one_without_a_lesson(tmp_path, press, calls):
@@ -97,10 +107,25 @@ def test_progress_goes_back_to_the_menu(tmp_path, press, calls, screen):
     assert "No Spanish calls yet" in screen.getvalue() and calls == []
 
 
-def test_done_after_the_report_card_starts_no_lesson(tmp_path, press):
+def test_after_the_report_card_you_can_go_to_the_menu_quit_or_start_a_lesson(tmp_path, press):
+    press(DOWN + ENTER, UP + ENTER, ENTER)
+
+    assert app._pick_next(learner(tmp_path, MISTAKES)) == app.MENU
+    assert app._pick_next(learner(tmp_path, MISTAKES)) == app.QUIT
+    assert app._pick_next(learner(tmp_path, MISTAKES)).pattern == "Ser y estar"
+
+
+def test_after_a_call_the_menu_comes_back(tmp_path, press, monkeypatch):
+    started = []
+
+    def start_call(profile, topics, arguments, lesson=None):
+        started.append(lesson)
+        return app.MENU
+
+    monkeypatch.setattr(app, "_start_call", start_call)
     press(UP + ENTER)
 
-    assert app._pick_next_lesson(learner(tmp_path, MISTAKES)) is None
+    assert app._menu(learner(tmp_path), None, app.CALL) == app.QUIT and started == [None]
 
 
 def test_ctrl_c_at_the_language_picker_quits_quietly(press, monkeypatch, capsys):
