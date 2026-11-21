@@ -1,7 +1,8 @@
 """Terminal output: the conversation, a live line of what the learner is saying, and feedback under each turn."""
 import sys
+import time
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.status import Status
 from rich.table import Table
@@ -19,7 +20,8 @@ SPEAKER_WIDTH = 5
 class Screen:
     def __init__(self, console: Console | None = None):
         self.console = console or Console(file=sys.stdout, highlight=False)  # fixed, so stdout redirects elsewhere can't swallow it
-        self._live = Live(Text(""), console=self.console, transient=True, refresh_per_second=12)
+        self._live_line = _LiveLine()
+        self._live = Live(self._live_line, console=self.console, transient=True, refresh_per_second=12)
         self._compa_line_open = False
         self._held_corrections: list[Correction] = []
 
@@ -35,16 +37,17 @@ class Screen:
         show_screen(self.console, context)
         self.console.print(indented(focus))
         self.console.print(indented(Text.assemble(("CLAUDE  ", FAINT), (account, FAINT))))
+        self._live_line.call_started_at = time.monotonic()
 
     def status(self, message: str) -> None:
-        self._live.update(indented(Text(message, style=MUTED)))
+        self._live_line.show(indented(Text(message, style=MUTED)))
 
     def partial(self, text: str) -> None:
-        self._live.update(_row(Text("●", style=PINK), Text(text, style=f"italic {MUTED}")))
+        self._live_line.show(_row(Text("●", style=PINK), Text(text, style=f"italic {MUTED}")))
 
     def learner(self, text: str) -> None:
         self._close_compa_line()
-        self._live.update(Text(""))
+        self._live_line.show(Text(""))
         self.console.print()
         self.console.print(_row(Text("YOU", style=f"bold {PINK}"), Text(text, style=TEXT)))
 
@@ -114,6 +117,23 @@ class Screen:
         self._compa_line_open = False
         held, self._held_corrections = self._held_corrections, []
         self._print_corrections(held)
+
+
+class _LiveLine:
+    """The bottom of the call screen, redrawn on every refresh: what's being said right now, then the call timer."""
+
+    def __init__(self):
+        self.call_started_at: float | None = None
+        self._current = Text("")
+
+    def show(self, renderable) -> None:
+        self._current = renderable
+
+    def __rich__(self) -> Group:
+        if self.call_started_at is None:
+            return Group(self._current)
+        minutes, seconds = divmod(int(time.monotonic() - self.call_started_at), 60)
+        return Group(self._current, indented(Text(f"◷ {minutes:02d}:{seconds:02d}", style=FAINT), top=1))
 
 
 def _row(speaker: Text, body: Text) -> Table:

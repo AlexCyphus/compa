@@ -54,3 +54,22 @@ def test_report_card_without_a_level_says_when_one_comes():
     text = rendered(report_card(card([]), None))
 
     assert "LEVEL AFTER 3 CALLS" in text
+
+
+def test_call_screen_shows_how_long_the_call_has_lasted(monkeypatch):
+    from rich.console import Console
+    from rich.text import Text
+
+    from compa import screen as screen_module
+    from compa.screen import Screen
+
+    clock = [100.0]
+    monkeypatch.setattr(screen_module.time, "monotonic", lambda: clock[0])
+    console = Console(record=True, width=80)
+    screen = Screen(console)
+    screen.call_header("SPANISH // CALL", Text("topic"), "me · pro")
+    clock[0] += 125
+
+    console.print(screen._live_line)
+
+    assert "02:05" in console.export_text()
