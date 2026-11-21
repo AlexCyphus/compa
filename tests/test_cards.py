@@ -72,4 +72,5 @@ def test_call_screen_shows_how_long_the_call_has_lasted_and_how_to_hang_up(monke
 
     console.print(screen._live_line)
 
-    assert "02:05" in console.export_text() and "CTRL-C to hang up" in console.export_text()
+    shown = console.export_text()
+    assert "02:05" in shown and "CTRL-C to hang up" in shown
