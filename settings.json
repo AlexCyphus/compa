@@ -1,7 +1,7 @@
 {
   "learner_name": "Alex",
   "native_language": "English",
-  "sessions_folder": "~/Desktop/Compa",
+  "sessions_folder": "~/.compa",
   "claude_config_dir": "~/.claude-personal",
   "talker_model": "claude-haiku-5-5",
   "corrector_model": "claude-sonnet-5-5",
