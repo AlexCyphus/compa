@@ -35,9 +35,9 @@ class Screen:
     def __exit__(self, *_) -> None:
         self._live.stop()
 
-    def call_header(self, context: str, focus: Text, account: str) -> None:
-        """A clean screen for the call: the header with what the call is about and, quietly, which Claude plan pays."""
-        show_screen(self.console, context, focus, f"Claude: {account}")
+    def call_header(self, context: str, focus: Text) -> None:
+        """A clean screen for the call: the header with what the call is about."""
+        show_screen(self.console, context, focus)
         self._live_line.call_started_at = time.monotonic()
 
     def status(self, message: str) -> None:

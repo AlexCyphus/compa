@@ -67,7 +67,7 @@ def test_call_screen_shows_how_long_the_call_has_lasted_and_how_to_hang_up(monke
     monkeypatch.setattr(screen_module.time, "monotonic", lambda: clock[0])
     console = Console(record=True, width=80)
     screen = Screen(console)
-    screen.call_header("Spanish · call", Text("topic"), "me · pro")
+    screen.call_header("Spanish", Text("topic"))
     clock[0] += 125
 
     console.print(screen._live_line)

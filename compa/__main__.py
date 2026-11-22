@@ -157,7 +157,7 @@ def _pick_weakness(profile) -> Weakness | None:
 
 def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, lesson: Weakness | None = None):
     """Runs a call, then its report card. Returns what to do next: a Weakness for a lesson, MENU or QUIT."""
-    account = use_claude_account(profile)
+    use_claude_account(profile)
     with Screen(CONSOLE) as screen:
         mic = arguments.mic or _built_in_mic()
         listener = Listener(MicSource(mic), profile.language, profile.whisper_prompt, arguments.end_silence)
@@ -170,7 +170,7 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, les
             conversation.talker.set_focus(topic, topics.words(topic))
             conversation.talker.set_memories(FriendMemory(profile.sessions_folder).facts())
             focus = _focus_line("Topic", topic, f"{len(topics.words(topic))}/{WORDS_FOR_COVERED} words")
-        screen.call_header(f"{_language_title(profile)} · call", focus, account)
+        screen.call_header(_language_title(profile), focus)
         try:
             asyncio.run(_call(conversation))
         except KeyboardInterrupt:
