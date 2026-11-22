@@ -20,7 +20,7 @@ def card(patterns: list[Pattern], previous_overall: int | None = None) -> Report
 def test_report_card_shows_the_level_and_its_name():
     text = rendered(report_card(card([]), "B2"))
 
-    assert "B2" in text and "UPPER INTERMEDIATE" in text
+    assert "B2" in text and "Upper intermediate" in text
 
 
 def test_report_card_leaves_out_the_summary_strengths_and_phrases():
@@ -53,7 +53,7 @@ def test_progress_card_shows_the_level_and_the_top_weaknesses():
 def test_report_card_without_a_level_says_when_one_comes():
     text = rendered(report_card(card([]), None))
 
-    assert "LEVEL AFTER 3 CALLS" in text
+    assert "Your level shows after 3 calls" in text
 
 
 def test_call_screen_shows_how_long_the_call_has_lasted_and_how_to_hang_up(monkeypatch):
@@ -67,10 +67,10 @@ def test_call_screen_shows_how_long_the_call_has_lasted_and_how_to_hang_up(monke
     monkeypatch.setattr(screen_module.time, "monotonic", lambda: clock[0])
     console = Console(record=True, width=80)
     screen = Screen(console)
-    screen.call_header("SPANISH // CALL", Text("topic"), "me · pro")
+    screen.call_header("Spanish · call", Text("topic"), "me · pro")
     clock[0] += 125
 
     console.print(screen._live_line)
 
     shown = console.export_text()
-    assert "02:05" in shown and "CTRL-C to hang up" in shown
+    assert "02:05" in shown and "ctrl-c to hang up" in shown

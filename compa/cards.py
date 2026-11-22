@@ -6,8 +6,7 @@ from rich.text import Text
 
 from compa.progress import CALLS_BEFORE_LEVEL, Weakness
 from compa.report import ReportCard, Scores
-from compa.theme import CYAN, INK, MINT, MUTED, PINK, PURPLE, SCREEN_WIDTH, TEXT, bar, gradient_color, indented, \
-    label, section
+from compa.theme import ACCENT, BAD, FAINT, GOOD, INK, MUTED, SCREEN_WIDTH, TEXT, bar, indented, label, section
 from compa.topics import WORDS_FOR_COVERED, TopicProgress
 
 # Every row lines up on one grid: a label column, a bar column and a value column, SCREEN_WIDTH characters in all.
@@ -33,12 +32,12 @@ def report_card(card: ReportCard, level: str | None) -> Padding:
                     for pattern in card.patterns[:MAX_MISTAKES]]
         parts.append(Group(section("Work on"), _pairs(mistakes)))
     if card.english_words:
-        words = [(word.said, Text.assemble(("→ ", PURPLE), (word.target, CYAN)))
+        words = [(word.said, Text.assemble(("→ ", FAINT), (word.target, ACCENT)))
                  for word in card.english_words[:MAX_WORDS]]
         parts.append(Group(section("Words you reached for"), _pairs(words)))
     if card.topics:
         parts.append(Group(section("Topics"), _topic_bars(card.topics[:MAX_TOPICS])))
-    parts.append(_footer(f"{card.minutes_talking:g} min", f"{card.words_per_minute} wpm"))
+    parts.append(_footer(f"{card.minutes_talking:g} min talking", f"{card.words_per_minute} words a minute"))
     return _card(parts)
 
 
@@ -52,7 +51,7 @@ def progress_card(level: str | None, past_grades: list[dict], mistakes: list[Wea
              _score_bars(Scores(latest["accuracy"], latest["range"], latest["fluency"]))]
     if mistakes:
         parts.append(Group(section("Work on"), _pairs([(mistake.pattern, Text("")) for mistake in mistakes[:MAX_MISTAKES]])))
-    parts.append(_footer(f"{calls} call{'s' if calls > 1 else ''}", f"{topics_covered} topics covered",
+    parts.append(_footer(f"{calls} call{'s' if calls > 1 else ''}", f"{topics_covered} topic{'s' if topics_covered != 1 else ''} covered",
                          f"{topics_started} started"))
     return _card(parts)
 
@@ -67,11 +66,11 @@ def _headline(level: str | None, overall: int, change: int | None) -> Table:
     table = Table.grid()
     table.add_column(width=SCREEN_WIDTH - 16)
     table.add_column(width=16, justify="right")
-    badge = Text.assemble((f" {level} ", f"bold {INK} on {PINK}"), (f"  {LEVEL_NAMES[level].upper()}", PINK)) if level \
-        else Text(f"LEVEL AFTER {CALLS_BEFORE_LEVEL} CALLS", style=MUTED)
-    grade = Text.assemble(("GRADE  ", MUTED), (str(overall), f"bold {CYAN}"))
+    badge = Text.assemble((f" {level} ", f"bold {INK} on {ACCENT}"), (f"  {LEVEL_NAMES[level]}", f"bold {TEXT}")) if level \
+        else Text(f"Your level shows after {CALLS_BEFORE_LEVEL} calls", style=MUTED)
+    grade = Text.assemble(("Grade  ", MUTED), (str(overall), f"bold {TEXT}"))
     if change:
-        grade.append(f"  {'▲' if change > 0 else '▼'}{abs(change)}", style=MINT if change > 0 else PINK)
+        grade.append(f"  {'▲' if change > 0 else '▼'}{abs(change)}", style=GOOD if change > 0 else BAD)
     table.add_row(badge, grade)
     return table
 
@@ -108,11 +107,11 @@ def _grid(label_width: int, bar_width: int) -> Table:
 
 
 def _sparkline(overalls: list[int]) -> Text:
-    """One spaced block per call, scaled to the calls shown so small changes are visible, shaded like the bars."""
+    """One spaced block per call, scaled to the calls shown so small changes are visible; the latest stands out."""
     low, high = min(overalls), max(overalls)
     steps = [(value - low) * (len(SPARK) - 1) // (high - low) if high > low else len(SPARK) // 2 for value in overalls]
-    last = max(len(steps) - 1, 1)
-    return Text(" ").join(Text(SPARK[step], style=gradient_color(index / last)) for index, step in enumerate(steps))
+    return Text(" ").join(Text(SPARK[step], style=ACCENT if index == len(steps) - 1 else MUTED)
+                          for index, step in enumerate(steps))
 
 
 def _pairs(rows: list[tuple[str, Text]]) -> Table:
@@ -125,4 +124,4 @@ def _pairs(rows: list[tuple[str, Text]]) -> Table:
 
 
 def _footer(*facts: str) -> Text:
-    return Text("  //  ".join(fact.upper() for fact in facts), style=MUTED)
+    return Text(" · ".join(facts), style=FAINT)

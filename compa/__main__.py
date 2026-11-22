@@ -26,7 +26,7 @@ from compa.screen import Screen
 from compa.session_file import save_call
 from compa.settings import load_profile, profile_names
 from compa.speak import Speaker
-from compa.theme import MUTED, PINK, TEXT, indented, print_header, show_screen
+from compa.theme import MUTED, TEXT, indented, print_header, show_screen
 from compa.topics import WORDS_FOR_COVERED, TopicMemory
 
 CACHE = Path("~/.cache/compa").expanduser()
@@ -65,14 +65,14 @@ def _print_once(profile, arguments: argparse.Namespace) -> None:
     if arguments.topics:
         _print_topics(topics)
     else:
-        print_header(CONSOLE, f"{profile.language_name} // progress")
+        print_header(CONSOLE, f"{profile.language_name} · progress", "Here's how you're coming along.")
         _print_report(profile, topics)
 
 
 def _ask_language() -> str | None:
     """The chosen profile name, or one just added; None to quit."""
     while True:
-        show_screen(CONSOLE, "")
+        show_screen(CONSOLE, "", "Howdy! Which language are we speaking today?")
         choice = pick("Language", [(_language_label(name), name) for name in profile_names()]
                       + [("＋  Add language", ADD)])
         if choice != ADD:
@@ -90,12 +90,12 @@ def _language_label(name: str) -> str:
 
 def _add_language() -> str | None:
     """Pick a language from the catalog and your level in it, then save it as a profile; None to go back."""
-    show_screen(CONSOLE, "Add language")
+    show_screen(CONSOLE, "add language", "Saddle up a new one. Which language?")
     language = pick("Add a language", [(f"{language.flag}  {language.name}", language)
                                        for language in addable_languages()] + [("← Back", BACK)])
     if language in (None, BACK):
         return None
-    show_screen(CONSOLE, f"Add {language.name}")
+    show_screen(CONSOLE, f"add {language.name}", f"How well do you speak {language.name} already?")
     level = pick(f"Your {language.name} level", [(f"{level}  {name}", level) for level, name in LEVEL_NAMES.items()]
                  + [("← Back", BACK)])
     if level in (None, BACK):
@@ -111,7 +111,7 @@ def _menu(profile, arguments: argparse.Namespace, step=None) -> str:
     topics = TopicMemory(profile.sessions_folder, profile.language)
     while True:
         if step is None:
-            show_screen(CONSOLE, _language_context(profile))
+            show_screen(CONSOLE, _language_context(profile), "What'll it be, partner?")
             step = pick("What now", [("Start a call", CALL), ("Lesson to improve on a weakness", LESSON),
                                      ("Progress", PROGRESS), ("Change language", LANGUAGES), ("Quit", QUIT)])
         if step in (None, LANGUAGES, QUIT):
@@ -127,20 +127,20 @@ def _menu(profile, arguments: argparse.Namespace, step=None) -> str:
 
 
 def _language_context(profile) -> str:
-    """The language for a screen header, with the level once there is one: "Spanish // B2"."""
+    """The language for a screen header, with the level once there is one: "Spanish · B2"."""
     level = estimated_level(grades(profile.sessions_folder, profile.language))
-    return profile.language_name + (f" // {level}" if level else "")
+    return profile.language_name + (f" · {level}" if level else "")
 
 
 def _show_progress(profile, topics: TopicMemory) -> None:
-    show_screen(CONSOLE, f"{profile.language_name} // progress")
+    show_screen(CONSOLE, f"{profile.language_name} · progress", "Here's how you're coming along.")
     _print_report(profile, topics)
     pick("", [("← Back", BACK)])
 
 
 def _pick_weakness(profile) -> Weakness | None:
     """A recurring mistake to have a lesson on; None to go back to the menu (Back or Esc)."""
-    show_screen(CONSOLE, f"{profile.language_name} // lessons")
+    show_screen(CONSOLE, f"{profile.language_name} · lessons", "Pick a mistake and we'll drill it.")
     found = weaknesses(profile.sessions_folder, profile.language)
     if not found:
         CONSOLE.print(indented(Text("No weaknesses yet. They show up after your first call.", style=MUTED), bottom=1))
@@ -165,7 +165,7 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, les
             conversation.talker.set_focus(topic, topics.words(topic))
             conversation.talker.set_memories(FriendMemory(profile.sessions_folder).facts())
             focus = _focus_line("Topic", topic, f"{len(topics.words(topic))}/{WORDS_FOR_COVERED} words")
-        screen.call_header(f"{profile.language_name} // call", focus, account)
+        screen.call_header(f"{profile.language_name} · call", focus, account)
         try:
             asyncio.run(_call(conversation))
         except KeyboardInterrupt:
@@ -177,16 +177,16 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, les
                                     style=MUTED)))
     card = None if conversation.unavailable else _report_card(profile, conversation, screen)
     path = save_call(profile.sessions_folder, profile.language_name, conversation.talker.history, conversation.log, card)
-    CONSOLE.print(indented(Text(f"SAVED  {path}", style=MUTED), bottom=1))
+    CONSOLE.print(indented(Text(f"Saved to {path}", style=MUTED), bottom=1))
     return _pick_next(profile)
 
 
 def _focus_line(kind: str, focus: str, detail: str = "") -> Text:
-    return Text.assemble(("// ", PINK), (f"{kind.upper()}  ", MUTED), (focus, TEXT), (f"  {detail}", MUTED))
+    return Text.assemble((f"{kind}: ", MUTED), (focus, TEXT), (f" · {detail}" if detail else "", MUTED))
 
 
 def _report_card(profile, conversation: Conversation, screen: Screen) -> ReportCard | None:
-    context = f"{profile.language_name} // report"
+    context = f"{profile.language_name} · report"
     try:
         with screen.writing_report(context):
             card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))
@@ -202,7 +202,7 @@ def _report_card(profile, conversation: Conversation, screen: Screen) -> ReportC
 def _pick_next(profile):
     """After the report card: a lesson on one of the top recurring mistakes, the menu, or quit. Esc is the menu."""
     lessons = weaknesses(profile.sessions_folder, profile.language)[:NEXT_LESSONS]
-    choice = pick("Next", [(f"Lesson  {weakness.pattern}", weakness) for weakness in lessons]
+    choice = pick("Next", [(f"Lesson on {weakness.pattern}", weakness) for weakness in lessons]
                   + [("Main menu", MENU), ("Quit", QUIT)])
     return MENU if choice is None else choice
 
