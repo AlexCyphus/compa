@@ -15,7 +15,7 @@ from rich.text import Text
 from compa.account import use_claude_account
 from compa.brain import ClaudeUnavailable
 from compa.cards import LEVEL_NAMES, progress_card
-from compa.catalog import add_language, addable_languages, flag
+from compa.catalog import add_language, addable_languages, flag, flag_for_code
 from compa.conversation import Brain, Conversation
 from compa.friend_memory import FriendMemory
 from compa.listen import Listener, MicSource
@@ -65,7 +65,7 @@ def _print_once(profile, arguments: argparse.Namespace) -> None:
     if arguments.topics:
         _print_topics(topics)
     else:
-        print_header(CONSOLE, f"{profile.language_name} · progress", "Here's how you're coming along.")
+        print_header(CONSOLE, f"{_language_title(profile)} · progress", "Here's how you're coming along.")
         _print_report(profile, topics)
 
 
@@ -111,7 +111,7 @@ def _menu(profile, arguments: argparse.Namespace, step=None) -> str:
     topics = TopicMemory(profile.sessions_folder, profile.language)
     while True:
         if step is None:
-            show_screen(CONSOLE, _language_context(profile), "What'll it be, partner?")
+            show_screen(CONSOLE, _language_context(profile))
             step = pick("What now", [("Start a call", CALL), ("Lesson to improve on a weakness", LESSON),
                                      ("Progress", PROGRESS), ("Change language", LANGUAGES), ("Quit", QUIT)])
         if step in (None, LANGUAGES, QUIT):
@@ -129,18 +129,23 @@ def _menu(profile, arguments: argparse.Namespace, step=None) -> str:
 def _language_context(profile) -> str:
     """The language for a screen header, with the level once there is one: "Spanish · B2"."""
     level = estimated_level(grades(profile.sessions_folder, profile.language))
-    return profile.language_name + (f" · {level}" if level else "")
+    return _language_title(profile) + (f" · {level}" if level else "")
+
+
+def _language_title(profile) -> str:
+    """The language with its flag, for screen headers: "🇪🇸 Spanish"."""
+    return f"{flag_for_code(profile.language)} {profile.language_name}".strip()
 
 
 def _show_progress(profile, topics: TopicMemory) -> None:
-    show_screen(CONSOLE, f"{profile.language_name} · progress", "Here's how you're coming along.")
+    show_screen(CONSOLE, f"{_language_title(profile)} · progress", "Here's how you're coming along.")
     _print_report(profile, topics)
     pick("", [("← Back", BACK)])
 
 
 def _pick_weakness(profile) -> Weakness | None:
     """A recurring mistake to have a lesson on; None to go back to the menu (Back or Esc)."""
-    show_screen(CONSOLE, f"{profile.language_name} · lessons", "Pick a mistake and we'll drill it.")
+    show_screen(CONSOLE, f"{_language_title(profile)} · lessons", "Pick a mistake and we'll drill it.")
     found = weaknesses(profile.sessions_folder, profile.language)
     if not found:
         CONSOLE.print(indented(Text("No weaknesses yet. They show up after your first call.", style=MUTED), bottom=1))
@@ -165,7 +170,7 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, les
             conversation.talker.set_focus(topic, topics.words(topic))
             conversation.talker.set_memories(FriendMemory(profile.sessions_folder).facts())
             focus = _focus_line("Topic", topic, f"{len(topics.words(topic))}/{WORDS_FOR_COVERED} words")
-        screen.call_header(f"{profile.language_name} · call", focus, account)
+        screen.call_header(f"{_language_title(profile)} · call", focus, account)
         try:
             asyncio.run(_call(conversation))
         except KeyboardInterrupt:
@@ -186,7 +191,7 @@ def _focus_line(kind: str, focus: str, detail: str = "") -> Text:
 
 
 def _report_card(profile, conversation: Conversation, screen: Screen) -> ReportCard | None:
-    context = f"{profile.language_name} · report"
+    context = f"{_language_title(profile)} · report"
     try:
         with screen.writing_report(context):
             card = asyncio.run(Reporter(profile).report(conversation.talker.history, conversation.log))

@@ -3,7 +3,9 @@ import sys
 import time
 
 from rich.console import Console, Group
+from rich import box
 from rich.live import Live
+from rich.panel import Panel
 from rich.status import Status
 from rich.table import Table
 from rich.text import Text
@@ -12,7 +14,8 @@ from compa.brain import Correction, Feedback, Story
 from compa.clozemaster import SaveResult
 from compa import cards
 from compa.report import ReportCard
-from compa.theme import ACCENT, BAD, FAINT, GOOD, INDENT, MUTED, SOFT, TEXT, indented, show_screen
+from compa.theme import ACCENT, BAD, FAINT, GOOD, INDENT, MUTED, SCREEN_WIDTH, SOFT, TEXT, TRACK, indented, \
+    show_screen
 
 SPEAKER_WIDTH = 3
 
@@ -23,7 +26,7 @@ class Screen:
         self._live_line = _LiveLine()
         self._live = Live(self._live_line, console=self.console, transient=True, refresh_per_second=12)
         self._compa_line_open = False
-        self._held_corrections: list[Correction] = []
+        self._held: list[Feedback] = []
 
     def __enter__(self) -> "Screen":
         self._live.start()
@@ -41,13 +44,13 @@ class Screen:
         self._live_line.show(indented(Text(message, style=MUTED)))
 
     def partial(self, text: str) -> None:
-        self._live_line.show(Group(Text(""), _row(Text("you", style=MUTED), Text(f"{text}…", style=f"italic {MUTED}"))))
+        self._live_line.show(Group(Text(""), indented(_you_box(Text(f"{text}…", style=f"italic {MUTED}")))))
 
     def learner(self, text: str) -> None:
         self._close_compa_line()
         self._live_line.show(Text(""))
         self.console.print()
-        self.console.print(_row(Text("you", style=MUTED), Text(text, style=SOFT)))
+        self.console.print(indented(_you_box(Text(text, style=SOFT))))
 
     def compa(self, sentence: str) -> None:
         speaker = Text("" if self._compa_line_open else "🤠")
@@ -64,26 +67,19 @@ class Screen:
         self._close_compa_line()
 
     def feedback(self, feedback: Feedback) -> None:
-        """English words show straight away so you can use them in your next turn; corrections wait for
-        Compa to finish its reply so they don't break it up."""
-        for word in feedback.english_words:
-            self.console.print(_row(Text(""), _marked(Text("↳", style=MUTED), Text.assemble(
-                (word.said, MUTED), (" → ", FAINT), (word.target, f"bold {ACCENT}"),
-                (f"  {word.note}" if word.note else "", FAINT)))))
+        """Corrections and English words in one box under your turn. If Compa is already answering, the box waits
+        for it to finish so it doesn't break the reply up."""
         if self._compa_line_open:
-            self._held_corrections.extend(feedback.corrections)
+            self._held.append(feedback)
         else:
-            self._print_corrections(feedback.corrections)
+            self._print_feedback([feedback])
 
-    def _print_corrections(self, corrections: list[Correction]) -> None:
-        if not corrections:
-            return
-        self.console.print()
-        for correction in corrections:
-            mark, color = ("✦", ACCENT) if correction.upgrade else ("✗", BAD)
-            self.console.print(_row(Text(""), _marked(Text(mark, style=color), Text.assemble(
-                (correction.said, f"strike {MUTED}"), (" → ", FAINT), (correction.correct, f"bold {GOOD}"),
-                ("\n", ""), (correction.why, FAINT)))))
+    def _print_feedback(self, batches: list[Feedback]) -> None:
+        lines = [_correction_line(correction) for batch in batches for correction in batch.corrections] \
+            + [_english_line(word) for batch in batches for word in batch.english_words]
+        if lines:
+            self.console.print(indented(Panel(Group(*lines), box=box.ROUNDED, border_style=TRACK, width=SCREEN_WIDTH,
+                                              title=Text("fixes", style=MUTED), title_align="left", padding=(0, 1))))
 
     def saved(self, result: SaveResult) -> None:
         for sentence in result.saved:
@@ -112,8 +108,8 @@ class Screen:
 
     def _close_compa_line(self) -> None:
         self._compa_line_open = False
-        held, self._held_corrections = self._held_corrections, []
-        self._print_corrections(held)
+        held, self._held = self._held, []
+        self._print_feedback(held)
 
 
 class _LiveLine:
@@ -135,6 +131,23 @@ class _LiveLine:
         return Group(self._current, indented(footer, top=1))
 
 
+def _you_box(body: Text) -> Panel:
+    return Panel(body, box=box.ROUNDED, border_style=TRACK, width=SCREEN_WIDTH, title=Text("you", style=MUTED),
+                 title_align="left", padding=(0, 1))
+
+
+def _correction_line(correction: Correction) -> Table:
+    mark, color = ("✦", ACCENT) if correction.upgrade else ("✗", BAD)
+    return _marked(Text(mark, style=color), Text.assemble(
+        (correction.said, f"strike {MUTED}"), (" → ", FAINT), (correction.correct, f"bold {GOOD}"),
+        ("\n", ""), (correction.why, FAINT)))
+
+
+def _english_line(word) -> Table:
+    return _marked(Text("↳", style=MUTED), Text.assemble(
+        (word.said, MUTED), (" → ", FAINT), (word.target, f"bold {ACCENT}"), (f"  {word.note}" if word.note else "", FAINT)))
+
+
 def _marked(mark: Text, body: Text) -> Table:
     """A feedback line under your turn: a one-character mark, the text wrapping beside it rather than under it."""
     table = Table.grid(padding=(0, 0, 0, 0))
@@ -148,6 +161,6 @@ def _row(speaker: Text, body) -> Table:
     """A line of the call: who is speaking in a narrow column, the words wrapping in their own column beside it."""
     table = Table.grid(padding=(0, 0, 0, len(INDENT)), pad_edge=True)
     table.add_column(width=len(INDENT) + SPEAKER_WIDTH)  # a column's width includes its padding
-    table.add_column()
+    table.add_column(max_width=SCREEN_WIDTH - SPEAKER_WIDTH)  # wraps where the boxes end
     table.add_row(speaker, body)
     return table

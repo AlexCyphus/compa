@@ -77,6 +77,10 @@ def flag(key: str) -> str:
     return next((language.flag for language in CATALOG if language.key == key), "")
 
 
+def flag_for_code(code: str) -> str:
+    return next((language.flag for language in CATALOG if language.code == code), "")
+
+
 def add_language(key: str, level: str) -> None:
     """Writes a profile for a catalog language to settings.json."""
     language = next(language for language in CATALOG if language.key == key)
