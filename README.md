@@ -2,30 +2,15 @@
 
 ![Compa mid-call: your words, their fixes and Compa's reply](docs/screenshot.png)
 
-A voice-call language partner that runs on your Mac. You talk, and Compa talks back like a curious friend. It brings up the day's news, shares opinions, asks follow-up questions and keeps the conversation going. Corrections and English words appear in the terminal while you talk, and a report card follows when you hang up.
-
-Everything runs locally except Claude: speech recognition (Whisper), voice detection (Silero) and the voice itself (Kokoro or macOS). Claude runs through your own Claude subscription via the Claude Agent SDK, with no API key.
-
-```
-🤠 Compa
-   ¡Qué más, Alex! Oye, ¿viste que Barranquilla recibe la final de la Sudamericana?
-   ¿Tú la vas a ver?
-
-🗣  You  Sí, con mis primos, aunque me gustaría que estamos en el… stadium.
-   🔤 stadium → estadio
-
-🤠 Compa
-   ¡Uy, en el estadio debe ser una locura! ¿Por quién vas, Boca o el Mineiro?
-
-   📝 your last turn
-   ✏️  que estamos → que estuviéramos  Subjuntivo tras 'me gustaría que'
-```
-
 ## Languages
 
 🇪🇸 Spanish · 🇫🇷 French · 🇩🇪 German · 🇮🇹 Italian · 🇧🇷 Portuguese · 🇳🇱 Dutch · 🇵🇱 Polish · 🇷🇺 Russian · 🇺🇦 Ukrainian · 🇸🇪 Swedish · 🇳🇴 Norwegian · 🇩🇰 Danish · 🇹🇷 Turkish · 🇬🇷 Greek · 🇯🇵 Japanese · 🇰🇷 Korean · 🇨🇳 Mandarin · 🇮🇩 Indonesian · 🇻🇳 Vietnamese · 🇮🇳 Hindi · Catalan · 🇺🇸 English
 
 Spanish, German, French, Catalan and English (for Spanish speakers) come with a profile in `settings.json`. For the others, add one (see [Settings](#settings)).
+
+A voice-call language partner that runs on your Mac. You talk, and Compa talks back like a curious friend. It brings up the day's news, shares opinions, asks follow-up questions and keeps the conversation going. Corrections and English words appear in the terminal while you talk, and a report card follows when you hang up.
+
+Everything runs locally except Claude: speech recognition (Whisper), voice detection (Silero) and the voice itself (Kokoro or macOS). Claude runs through your own Claude subscription via the Claude Agent SDK, with no API key.
 
 ## Setup
 
