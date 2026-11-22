@@ -2,6 +2,7 @@ import dataclasses
 
 from compa.brain import Correction, EnglishWord, Feedback
 from compa.call_log import CallLog, TurnRecord
+from compa.friend_memory import FriendMemory
 from compa.report import Reporter, Scores, measured_scores
 from compa.settings import load_profile
 
@@ -56,3 +57,19 @@ async def test_report_card_counts_recurring_patterns_across_calls(tmp_path):
     assert 0 < first.scores.range <= 100 and first.summary and first.patterns
     assert max(pattern.times_seen for pattern in second.patterns) == 2
     print(first)
+
+
+async def test_report_remembers_what_the_learner_said_about_their_life(tmp_path):
+    profile = dataclasses.replace(load_profile("spanish"), sessions_folder=tmp_path)
+    history = [("assistant", "¿Qué tal la semana?"),
+               ("user", "Bien, pero estoy nervioso porque el viernes Chelsea tiene su examen de conducir."),
+               ("assistant", "¡Uy! ¿Y cómo se siente ella?"),
+               ("user", "Un poco nerviosa también. Y yo me voy a Bogotá en enero para visitar a mi hermano.")]
+    log = CallLog(turns=[TurnRecord(history[1][1], seconds=6, feedback=Feedback([], [])),
+                         TurnRecord(history[3][1], seconds=6, feedback=Feedback([], []))])
+
+    await Reporter(profile).report(history, log)
+
+    facts = " ".join(FriendMemory(tmp_path).facts()).lower()
+    print(facts)
+    assert "chelsea" in facts and "bogot" in facts

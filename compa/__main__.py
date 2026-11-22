@@ -17,6 +17,7 @@ from compa.brain import ClaudeUnavailable
 from compa.cards import LEVEL_NAMES, progress_card
 from compa.catalog import add_language, addable_languages, flag
 from compa.conversation import Brain, Conversation
+from compa.friend_memory import FriendMemory
 from compa.listen import Listener, MicSource
 from compa.menu import pick
 from compa.progress import Weakness, estimated_level, grades, weaknesses
@@ -162,6 +163,7 @@ def _start_call(profile, topics: TopicMemory, arguments: argparse.Namespace, les
         else:
             topic = _matching_topic(topics, arguments.topic) if arguments.topic else topics.next_topic()
             conversation.talker.set_focus(topic, topics.words(topic))
+            conversation.talker.set_memories(FriendMemory(profile.sessions_folder).facts())
             focus = _focus_line("Topic", topic, f"{len(topics.words(topic))}/{WORDS_FOR_COVERED} words")
         screen.call_header(f"{profile.language_name} // call", focus, account)
         try:

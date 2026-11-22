@@ -320,6 +320,7 @@ class Talker:
         self._focus: str | None = None
         self._focus_words: list[str] = []
         self._lesson: str | None = None
+        self._memories: list[str] = []
 
     async def start(self) -> None:
         await self._pool.start()
@@ -334,6 +335,10 @@ class Talker:
         """Make this call a lesson on a mistake the learner keeps making."""
         shown = f" (corrected examples from their calls: {'; '.join(examples)})" if examples else ""
         self._lesson = f"{mistake}{shown}"
+
+    def set_memories(self, facts: list[str]) -> None:
+        """What the learner told Compa in earlier calls, to bring up like a friend would."""
+        self._memories = list(facts)
 
     def set_focus(self, topic: str, words_already_used: list[str]) -> None:
         """The call's main topic, and the topic words the learner has already used in earlier calls."""
@@ -355,14 +360,18 @@ class Talker:
             topic = "one interesting story from the briefing"
         else:
             topic = f"something about {random.choice(SPARKS)}"
-        task = (
-            f"The call has just connected. Greet {self.profile.learner_name} warmly, then bring up {topic} "
-            "and ask a question about it, all in 2-3 short sentences."
-        )
+        if self._memories:
+            task = (f"The call has just connected. Greet {self.profile.learner_name} warmly and, like a friend, ask "
+                    "about one thing from what_you_remember (best a plan or event whose date has now passed), all in "
+                    f"2 short sentences. Bring up {topic} later, once that has been talked about.")
+        else:
+            task = (f"The call has just connected. Greet {self.profile.learner_name} warmly, then bring up {topic} "
+                    "and ask a question about it, all in 2-3 short sentences.")
         return self._start_reply(task, None)
 
     def _start_reply(self, task: str, user_text: str | None) -> Reply:
-        blocks = (self._lesson_block() or self._briefing_block(), self._focus_block(), self._history_block(), task)
+        blocks = (self._lesson_block() or "\n\n".join(filter(None, (self._memory_block(), self._briefing_block()))),
+                  self._focus_block(), self._history_block(), task)
         prompt = "\n\n".join(part for part in blocks if part)
 
         def record(assistant_text: str) -> None:
@@ -372,6 +381,15 @@ class Talker:
 
         marker = INTERRUPTED_MARKER.get(self.profile.language, "interrupted")
         return Reply(self._pool, prompt, record, marker)
+
+    def _memory_block(self) -> str:
+        if not self._memories:
+            return ""
+        lines = "\n".join(f"- {fact}" for fact in self._memories)
+        return f"""<what_you_remember>
+What {self.profile.learner_name} told you in earlier calls (dated). Use it like a friend would: ask how things went, refer back to people and plans by name, connect it to what they're saying now. One mention every few turns at most, never a list of what you know, and never in a way that sounds like you're reading notes. Today is {date.today().isoformat()}.
+{lines}
+</what_you_remember>"""
 
     def _briefing_block(self) -> str:
         if not self._briefing:

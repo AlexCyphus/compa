@@ -208,3 +208,12 @@ def test_a_correction_the_learner_already_made_themselves_is_dropped():
     feedback = _parse_feedback(answer, "No, te vas a hablar, o sea, vas a hablar con Chelsea, y mis errores es raros")
 
     assert [correction.correct for correction in feedback.corrections] == ["mis errores son"]
+
+
+async def test_opener_follows_up_on_something_the_learner_said_before(talker):
+    talker.set_memories(["2026-11-18: Chelsea (girlfriend) has her driving test on 2026-11-20"])
+    reply = talker.opener()
+    async for _ in reply.sentences():
+        pass
+    print(f"\nopener: {reply.full_text}")
+    assert "chelsea" in reply.full_text.lower()

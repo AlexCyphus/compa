@@ -60,6 +60,7 @@ compa --mic "MacBook Pro Microphone"
 
 ## Topics, level and lessons
 
+- **Remembers you:** after each call, the people, plans and events you mentioned are saved (`about-you.json`, shared by every language). The next call opens by asking how they went, and Compa brings them up now and then, like a friend would. Lessons stay drills.
 - **Topics:** about 130 everyday topics, from fishing and hunting to taxes and paperwork. Every call has a focus topic you haven't covered yet, and Compa steers towards its vocabulary you haven't used. After the call, the topic words you used yourself are remembered (`topics-<lang>.json`). A topic is covered at 30 words.
 - **Level:** an approximate CEFR level from the range score of your last 5 calls.
 - **Lessons:** your recurring mistakes (subjunctive, gender agreement…) are one pick away in the menu and after each report card. A lesson is a call where Compa acts as your teacher: it explains the rule in a sentence, gets you using it, corrects that one structure out loud and has you say it again.
@@ -83,7 +84,7 @@ After each call:
 - **Recurring errors:** each common error shows how many calls it has appeared in.
 - **Also listed:** the English words you used, phrases to try next time, and what went well.
 
-History is kept in `sessions_folder` as `grades-<lang>.json` and `common-errors-<lang>.json`.
+Everything is kept in `sessions_folder` (`~/.compa`): the saved calls, `grades-<lang>.json`, `common-errors-<lang>.json`, `topics-<lang>.json` and `about-you.json`.
 
 ## Settings
 
