@@ -1,5 +1,7 @@
 # 🤠 Compa
 
+![Compa mid-call: your words, their fixes and Compa's reply](docs/screenshot.png)
+
 A voice-call language partner that runs on your Mac. You talk, and Compa talks back like a curious friend. It brings up the day's news, shares opinions, asks follow-up questions and keeps the conversation going. Corrections and English words appear in the terminal while you talk, and a report card follows when you hang up.
 
 Everything runs locally except Claude: speech recognition (Whisper), voice detection (Silero) and the voice itself (Kokoro or macOS). Claude runs through your own Claude subscription via the Claude Agent SDK, with no API key.
